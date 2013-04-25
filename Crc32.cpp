@@ -1,6 +1,7 @@
 // //////////////////////////////////////////////////////////
 // Crc32.cpp
 // Copyright (c) 2011 Stephan Brumme. All rights reserved.
+// see http://create.stephan-brumme.com/disclaimer.html
 //
 
 // g++ -o Crc32.exe Crc32.cpp -std=c++0x -O3 -march=native -mtune=native

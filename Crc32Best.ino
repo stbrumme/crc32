@@ -1,6 +1,7 @@
 // //////////////////////////////////////////////////////////
 // Crc32Best.ino
 // Copyright (c) 2011 Stephan Brumme. All rights reserved.
+// see http://create.stephan-brumme.com/disclaimer.html
 //
 
 /// zlib's CRC32 polynomial
