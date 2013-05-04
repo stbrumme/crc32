@@ -1,43 +1,59 @@
 // //////////////////////////////////////////////////////////
 // Crc32.cpp
-// Copyright (c) 2011 Stephan Brumme. All rights reserved.
+// Copyright (c) 2011-2013 Stephan Brumme. All rights reserved.
 // see http://create.stephan-brumme.com/disclaimer.html
 //
 
-// g++ -o Crc32.exe Crc32.cpp -std=c++0x -O3 -march=native -mtune=native
-#include <cstdlib>
+// g++ -o Crc32 Crc32.cpp -O3 -march=native -mtune=native
 
+#include <stdlib.h>
+
+// define endianess and some integer data types
 #ifdef _MSC_VER
-typedef unsigned __int8  uint8_t;
-typedef unsigned __int32 uint32_t;
-typedef          __int32  int32_t;
+  typedef unsigned __int8  uint8_t;
+  typedef unsigned __int32 uint32_t;
+  typedef          __int32  int32_t;
+  #define __LITTLE_ENDIAN 1234
+  #define __BIG_ENDIAN    4321
+  #define __BYTE_ORDER    __LITTLE_ENDIAN
 #else
-#include <cstdint>
+  // uint8_t, uint32_t, in32_t
+  #include <stdint.h>
+  // defines __BYTE_ORDER as __LITTLE_ENDIAN or __BIG_ENDIAN
+#include <endian.h>
 #endif
 
-/// one gigabyte !
-const size_t NumBytes = 1024*1024*1024;
-/// 4k chunks
-const size_t DefaultChunkSize = 4*1023;
 /// zlib's CRC32 polynomial
 const uint32_t Polynomial = 0xEDB88320;
 
+/// swap endianess
+static inline uint32_t swap(uint32_t x)
+{
+#if defined(__GNUC__) || defined(__clang__)
+  return __builtin_bswap32(x);
+#else
+  return (x >> 24) |
+        ((x >>  8) & 0x0000FF00) |
+        ((x <<  8) & 0x00FF0000) |
+         (x << 24);
+#endif
+}
 
-// forward declaration, table is at the end of this file
-extern const uint32_t crc32Lookup[8][256]; // extern is needed to keep compiler happey
+/// forward declaration, table is at the end of this file
+extern const uint32_t Crc32Lookup[8][256]; // extern is needed to keep compiler happey
 
 
-/// compute CRC32
+/// compute CRC32 (bitwise algorithm)
 uint32_t crc32_bitwise(const void* data, size_t length, uint32_t previousCrc32 = 0)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
-  uint8_t* current = (uint8_t*) data;
+  const uint8_t* current = (const uint8_t*) data;
 
-  while (length--)
+  while (length-- > 0)
   {
     crc ^= *current++;
 
-    for (unsigned int j = 0; j < 8; j++)
+    for (int j = 0; j < 8; j++)
     {
       // branch-free, version 1
       //crc = (crc >> 1) ^ (crc & 1)*Polynomial;
@@ -56,23 +72,23 @@ uint32_t crc32_bitwise(const void* data, size_t length, uint32_t previousCrc32 =
 }
 
 
-/// compute CRC32
+/// compute CRC32 (half-byte algoritm)
 uint32_t crc32_halfbyte(const void* data, size_t length, uint32_t previousCrc32 = 0)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
-  uint8_t* current = (uint8_t*) data;
+  const uint8_t* current = (const uint8_t*) data;
 
   /// look-up table for half-byte, same as crc32Lookup[0][16*i]
-  static const uint32_t crc32Lookup16[16] =
+  static const uint32_t Crc32Lookup16[16] =
   {
     0x00000000,0x1DB71064,0x3B6E20C8,0x26D930AC,0x76DC4190,0x6B6B51F4,0x4DB26158,0x5005713C,
     0xEDB88320,0xF00F9344,0xD6D6A3E8,0xCB61B38C,0x9B64C2B0,0x86D3D2D4,0xA00AE278,0xBDBDF21C
   };
 
-  while (length--)
+  while (length-- > 0)
   {
-    crc = crc32Lookup16[(crc ^  *current      ) & 0x0F] ^ (crc >> 4);
-    crc = crc32Lookup16[(crc ^ (*current >> 4)) & 0x0F] ^ (crc >> 4);
+    crc = Crc32Lookup16[(crc ^  *current      ) & 0x0F] ^ (crc >> 4);
+    crc = Crc32Lookup16[(crc ^ (*current >> 4)) & 0x0F] ^ (crc >> 4);
     current++;
   }
 
@@ -80,191 +96,127 @@ uint32_t crc32_halfbyte(const void* data, size_t length, uint32_t previousCrc32 
 }
 
 
-/// compute CRC32
+/// compute CRC32 (standard algorithm)
 uint32_t crc32_1byte(const void* data, size_t length, uint32_t previousCrc32 = 0)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
-  uint8_t* current = (uint8_t*) data;
+  const uint8_t* current = (const uint8_t*) data;
 
-  while (length--)
-    crc = (crc >> 8) ^ crc32Lookup[0][(crc & 0xFF) ^ *current++];
+  while (length-- > 0)
+    crc = (crc >> 8) ^ Crc32Lookup[0][(crc & 0xFF) ^ *current++];
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
 
 
-/// compute CRC32
+/// compute CRC32 (Slicing-by-4 algorithm)
 uint32_t crc32_4bytes(const void* data, size_t length, uint32_t previousCrc32 = 0)
 {
-  uint32_t* current = (uint32_t*) data;
   uint32_t  crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
+  const uint32_t* current = (const uint32_t*) data;
 
-  // process four bytes at once
+  // process four bytes at once (Slicing-by-4)
   while (length >= 4)
   {
-    crc ^= *current++;
-    crc  = crc32Lookup[3][ crc      & 0xFF] ^
-           crc32Lookup[2][(crc>> 8) & 0xFF] ^
-           crc32Lookup[1][(crc>>16) & 0xFF] ^
-           crc32Lookup[0][ crc>>24        ];
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint32_t one = *current++ ^ swap(crc);
+    crc  = Crc32Lookup[0][ one      & 0xFF] ^
+           Crc32Lookup[1][(one>> 8) & 0xFF] ^
+           Crc32Lookup[2][(one>>16) & 0xFF] ^
+           Crc32Lookup[3][(one>>24) & 0xFF];
+#else
+    uint32_t one = *current++ ^ crc;
+    crc  = Crc32Lookup[0][(one>>24) & 0xFF] ^
+           Crc32Lookup[1][(one>>16) & 0xFF] ^
+           Crc32Lookup[2][(one>> 8) & 0xFF] ^
+           Crc32Lookup[3][ one      & 0xFF];
+#endif
+
     length -= 4;
   }
 
-  const uint8_t* currentChar = (uint8_t*) current;
-  // remaining 1 to 3 bytes (standard CRC table-based algorithm)
-  while (length--)
-    crc = (crc >> 8) ^ crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];
+  const uint8_t* currentChar = (const uint8_t*) current;
+  // remaining 1 to 3 bytes (standard algorithm)
+  while (length-- > 0)
+    crc = (crc >> 8) ^ Crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
 
 
-/// compute CRC32
+/// compute CRC32 (Slicing-by-8 algorithm)
 uint32_t crc32_8bytes(const void* data, size_t length, uint32_t previousCrc32 = 0)
 {
-  uint32_t* current = (uint32_t*) data;
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
+  const uint32_t* current = (const uint32_t*) data;
 
-  // process eight bytes at once
+  // process eight bytes at once (Slicing-by-8)
   while (length >= 8)
   {
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint32_t one = *current++ ^ swap(crc);
+    uint32_t two = *current++;
+    crc  = Crc32Lookup[0][ two      & 0xFF] ^
+           Crc32Lookup[1][(two>> 8) & 0xFF] ^
+           Crc32Lookup[2][(two>>16) & 0xFF] ^
+           Crc32Lookup[3][(two>>24) & 0xFF] ^
+           Crc32Lookup[4][ one      & 0xFF] ^
+           Crc32Lookup[5][(one>> 8) & 0xFF] ^
+           Crc32Lookup[6][(one>>16) & 0xFF] ^
+           Crc32Lookup[7][(one>>24) & 0xFF];
+#else
     uint32_t one = *current++ ^ crc;
     uint32_t two = *current++;
-    crc  = crc32Lookup[7][ one      & 0xFF] ^
-           crc32Lookup[6][(one>> 8) & 0xFF] ^
-           crc32Lookup[5][(one>>16) & 0xFF] ^
-           crc32Lookup[4][ one>>24        ] ^
-           crc32Lookup[3][ two      & 0xFF] ^
-           crc32Lookup[2][(two>> 8) & 0xFF] ^
-           crc32Lookup[1][(two>>16) & 0xFF] ^
-           crc32Lookup[0][ two>>24        ];
+    crc  = Crc32Lookup[0][(two>>24) & 0xFF] ^
+           Crc32Lookup[1][(two>>16) & 0xFF] ^
+           Crc32Lookup[2][(two>> 8) & 0xFF] ^
+           Crc32Lookup[3][ two      & 0xFF] ^
+           Crc32Lookup[4][(one>>24) & 0xFF] ^
+           Crc32Lookup[5][(one>>16) & 0xFF] ^
+           Crc32Lookup[6][(one>> 8) & 0xFF] ^
+           Crc32Lookup[7][ one      & 0xFF];
+#endif
+
     length -= 8;
   }
 
-  uint8_t* currentChar = (uint8_t*) current;
-  // remaining 1 to 7 bytes (standard CRC table-based algorithm)
-  while (length--)
-    crc = (crc >> 8) ^ crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];
+  const uint8_t* currentChar = (const uint8_t*) current;
+  // remaining 1 to 7 bytes (standard algorithm)
+  while (length-- > 0)
+    crc = (crc >> 8) ^ Crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
 
 
-#include <cstdio>
-#include <ctime>
-#ifdef _MSC_VER
-#include <windows.h>
-#endif
-// timing
-static double seconds()
-{
-#ifdef _MSC_VER
-  LARGE_INTEGER frequency, now;
-  QueryPerformanceFrequency(&frequency);
-  QueryPerformanceCounter  (&now);
-  return now.QuadPart / double(frequency.QuadPart);
-#else
-  return clock() / double(CLOCKS_PER_SEC);
-#endif
-}
+// //////////////////////////////////////////////////////////
+// constants
 
 
-
-int main(int argc, char* argv[])
-{
-  char* data = new char[NumBytes];
-
-  // initialize
-  for (size_t i = 0; i < NumBytes; i++)
-    data[i] = char(i & 0xFF);
-
-  // re-use variables
-  double startTime, duration;
-  uint32_t crc;
-
-  // bitwise
-  startTime = seconds();
-  crc = crc32_bitwise(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("bitwise        : CRC=%08X, %.3fs, %.3f MB/s\n", 
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // half-byte
-  startTime = seconds();
-  crc = crc32_halfbyte(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("half-byte      : CRC=%08X, %.3fs, %.3f MB/s\n", 
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // one byte at once
-  startTime = seconds();
-  crc = crc32_1byte(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("1 byte  at once: CRC=%08X, %.3fs, %.3f MB/s\n", 
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // four bytes at once
-  startTime = seconds();
-  crc = crc32_4bytes(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("4 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n", 
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // eight bytes at once
-  startTime = seconds();
-  crc = crc32_8bytes(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("8 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n", 
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // eight bytes at once, process in 4k chunks
-  startTime = seconds();
-  crc = 0; // also default parameter of crc32_xx functions
-  size_t bytesProcessed = 0;
-  while (bytesProcessed < NumBytes)
-  {
-    size_t bytesLeft = NumBytes - bytesProcessed;
-    size_t chunkSize = (DefaultChunkSize < bytesLeft) ? DefaultChunkSize : bytesLeft;
-
-    crc = crc32_8bytes(data+bytesProcessed, chunkSize, crc);
-
-    bytesProcessed += chunkSize;
-  }
-  duration  = seconds() - startTime;
-  printf("chunked        : CRC=%08X, %.3fs, %.3f MB/s\n", 
-    crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  return 0;
-}
-
-
-
-
-
-/// look-up table, already defined in line 18
-const uint32_t crc32Lookup[8][256] =
+/// look-up table, already declared above
+const uint32_t Crc32Lookup[8][256] =
 {
   //// same algorithm as crc32_bitwise
-  //for (uint32_t i = 0; i <= 0xFF; i++)
+  //for (int i = 0; i <= 0xFF; i++)
   //{
   //  uint32_t crc = i;
-  //  for (unsigned int j = 0; j < 8; j++)
+  //  for (int j = 0; j < 8; j++)
   //    crc = (crc >> 1) ^ ((crc & 1) * Polynomial);
-  //  crc32Lookup[0][i] = crc;
+  //  Crc32Lookup[0][i] = crc;
   //}
   //// ... and the following slicing-by-8 algorithm (from Intel):
   //// http://www.intel.com/technology/comms/perfnet/download/CRC_generators.pdf
   //// http://sourceforge.net/projects/slicing-by-8/
-  //for (unsigned int i = 0; i <= 0xFF; i++)
+  //for (int i = 0; i <= 0xFF; i++)
   //{
-  //  crc32Lookup[1][i] = (crc32Lookup[0][i] >> 8) ^ crc32Lookup[0][crc32Lookup[0][i] & 0xFF];
-  //  crc32Lookup[2][i] = (crc32Lookup[1][i] >> 8) ^ crc32Lookup[0][crc32Lookup[1][i] & 0xFF];
-  //  crc32Lookup[3][i] = (crc32Lookup[2][i] >> 8) ^ crc32Lookup[0][crc32Lookup[2][i] & 0xFF];
+  //  Crc32Lookup[1][i] = (Crc32Lookup[0][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[0][i] & 0xFF];
+  //  Crc32Lookup[2][i] = (Crc32Lookup[1][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[1][i] & 0xFF];
+  //  Crc32Lookup[3][i] = (Crc32Lookup[2][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[2][i] & 0xFF];
 
-  //  crc32Lookup[4][i] = (crc32Lookup[3][i] >> 8) ^ crc32Lookup[0][crc32Lookup[3][i] & 0xFF];
-  //  crc32Lookup[5][i] = (crc32Lookup[4][i] >> 8) ^ crc32Lookup[0][crc32Lookup[4][i] & 0xFF];
-  //  crc32Lookup[6][i] = (crc32Lookup[5][i] >> 8) ^ crc32Lookup[0][crc32Lookup[5][i] & 0xFF];
-  //  crc32Lookup[7][i] = (crc32Lookup[6][i] >> 8) ^ crc32Lookup[0][crc32Lookup[6][i] & 0xFF];
+  //  Crc32Lookup[4][i] = (Crc32Lookup[3][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[3][i] & 0xFF];
+  //  Crc32Lookup[5][i] = (Crc32Lookup[4][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[4][i] & 0xFF];
+  //  Crc32Lookup[6][i] = (Crc32Lookup[5][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[5][i] & 0xFF];
+  //  Crc32Lookup[7][i] = (Crc32Lookup[6][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[6][i] & 0xFF];
   //}
   { 0x00000000,0x77073096,0xEE0E612C,0x990951BA,0x076DC419,0x706AF48F,0xE963A535,0x9E6495A3,
     0x0EDB8832,0x79DCB8A4,0xE0D5E91E,0x97D2D988,0x09B64C2B,0x7EB17CBD,0xE7B82D07,0x90BF1D91,
@@ -530,3 +482,103 @@ const uint32_t crc32Lookup[8][256] =
     0xFF6B144A,0x33C114D4,0xBD4E1337,0x71E413A9,0x7B211AB0,0xB78B1A2E,0x39041DCD,0xF5AE1D53,
     0x2C8E0FFF,0xE0240F61,0x6EAB0882,0xA201081C,0xA8C40105,0x646E019B,0xEAE10678,0x264B06E6 }
 };
+
+
+// //////////////////////////////////////////////////////////
+// test code
+
+
+/// one gigabyte
+const size_t NumBytes = 1024*1024*1024;
+/// 4k chunks during last test
+const size_t DefaultChunkSize = 4*1024;
+
+
+#include <cstdio>
+#include <ctime>
+#ifdef _MSC_VER
+#include <windows.h>
+#endif
+
+// timing
+static double seconds()
+{
+#ifdef _MSC_VER
+  LARGE_INTEGER frequency, now;
+  QueryPerformanceFrequency(&frequency);
+  QueryPerformanceCounter  (&now);
+  return now.QuadPart / double(frequency.QuadPart);
+#else
+  return clock() / double(CLOCKS_PER_SEC);
+#endif
+}
+
+
+int main(int, char**)
+{
+  printf("Please wait ...\n");
+
+  // initialize
+  char* data = new char[NumBytes];
+  for (size_t i = 0; i < NumBytes; i++)
+    data[i] = char(i & 0xFF);
+
+  // re-use variables
+  double startTime, duration;
+  uint32_t crc;
+
+  // bitwise
+  startTime = seconds();
+  crc = crc32_bitwise(data, NumBytes);
+  duration  = seconds() - startTime;
+  printf("bitwise        : CRC=%08X, %.3fs, %.3f MB/s\n",
+         crc, duration, (NumBytes / (1024*1024)) / duration);
+
+  // half-byte
+  startTime = seconds();
+  crc = crc32_halfbyte(data, NumBytes);
+  duration  = seconds() - startTime;
+  printf("half-byte      : CRC=%08X, %.3fs, %.3f MB/s\n",
+         crc, duration, (NumBytes / (1024*1024)) / duration);
+
+  // one byte at once
+  startTime = seconds();
+  crc = crc32_1byte(data, NumBytes);
+  duration  = seconds() - startTime;
+  printf("1 byte  at once: CRC=%08X, %.3fs, %.3f MB/s\n",
+         crc, duration, (NumBytes / (1024*1024)) / duration);
+
+  // four bytes at once
+  startTime = seconds();
+  crc = crc32_4bytes(data, NumBytes);
+  duration  = seconds() - startTime;
+  printf("4 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n",
+         crc, duration, (NumBytes / (1024*1024)) / duration);
+
+  // eight bytes at once
+  startTime = seconds();
+  crc = crc32_8bytes(data, NumBytes);
+  duration  = seconds() - startTime;
+  printf("8 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n",
+         crc, duration, (NumBytes / (1024*1024)) / duration);
+
+  // eight bytes at once, process in 4k chunks
+  startTime = seconds();
+  crc = 0; // also default parameter of crc32_xx functions
+  size_t bytesProcessed = 0;
+  while (bytesProcessed < NumBytes*16)
+  {
+    size_t bytesLeft = 16*NumBytes - bytesProcessed;
+    size_t chunkSize = (DefaultChunkSize < bytesLeft) ? DefaultChunkSize : bytesLeft;
+
+    crc = crc32_8bytes(data+bytesProcessed, chunkSize, crc);
+
+    bytesProcessed += chunkSize;
+  }
+  duration  = seconds() - startTime;
+  printf("chunked        : CRC=%08X, %.3fs, %.3f MB/s\n",
+    crc, duration, (NumBytes / (1024*1024)) / duration);
+
+  delete[] data;
+  return 0;
+}
