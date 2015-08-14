@@ -21,7 +21,7 @@
 #include <stdlib.h>
 
 // define endianess and some integer data types
-#ifdef _MSC_VER
+#if defined(_MSC_VER) || defined(__MINGW32__)
   typedef unsigned __int8  uint8_t;
   typedef unsigned __int32 uint32_t;
   typedef   signed __int32  int32_t;
@@ -31,12 +31,16 @@
   #define __BYTE_ORDER    __LITTLE_ENDIAN
 
   #include <xmmintrin.h>
-  #define PREFETCH(location) _mm_prefetch(location, _MM_HINT_T0)
+  #ifdef __MINGW32__
+    #define PREFETCH(location) __builtin_prefetch(location)
+  #else
+    #define PREFETCH(location) _mm_prefetch(location, _MM_HINT_T0)
+  #endif
 #else
   // uint8_t, uint32_t, in32_t
   #include <stdint.h>
   // defines __BYTE_ORDER as __LITTLE_ENDIAN or __BIG_ENDIAN
-  #include <endian.h>
+  #include <sys/param.h>
 
   #ifdef __GNUC__
     #define PREFETCH(location) __builtin_prefetch(location)
@@ -1016,7 +1020,8 @@ const size_t DefaultChunkSize = 4*1024;
 
 
 #include <cstdio>
-#ifdef _MSC_VER
+//#if defined(_MSC_VER) || defined(__CYGWIN__)
+#if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #else
 #include <ctime>
@@ -1025,7 +1030,8 @@ const size_t DefaultChunkSize = 4*1024;
 // timing
 static double seconds()
 {
-#ifdef _MSC_VER
+//#if defined(_MSC_VER) || defined(__CYGWIN__)
+#if defined(_WIN32) || defined(_WIN64)
   LARGE_INTEGER frequency, now;
   QueryPerformanceFrequency(&frequency);
   QueryPerformanceCounter  (&now);
