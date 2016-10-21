@@ -1,15 +1,14 @@
 // //////////////////////////////////////////////////////////
 // Crc32.cpp
-// Copyright (c) 2011-2015 Stephan Brumme. All rights reserved.
+// Copyright (c) 2011-2016 Stephan Brumme. All rights reserved.
 // Slicing-by-16 contributed by Bulat Ziganshin
+// Tableless bytewise CRC contributed by Hagai Gold
 // see http://create.stephan-brumme.com/disclaimer.html
 //
 
-// g++ -o Crc32 Crc32.cpp -O3 -lrt -march=native -mtune=native
-
 // if running on an embedded system, you might consider shrinking the
 // big Crc32Lookup table:
-// - crc32_bitwise doesn't need it at all
+// - crc32_bitwise  doesn't need it at all
 // - crc32_halfbyte has its own small lookup table
 // - crc32_1byte    needs only Crc32Lookup[0]
 // - crc32_4bytes   needs only Crc32Lookup[0..3]
@@ -18,14 +17,10 @@
 // - crc32_16bytes  needs all of Crc32Lookup
 
 
-#include <stdlib.h>
+#include "Crc32.h"
 
 // define endianess and some integer data types
 #if defined(_MSC_VER) || defined(__MINGW32__)
-  typedef unsigned __int8  uint8_t;
-  typedef unsigned __int32 uint32_t;
-  typedef   signed __int32  int32_t;
-
   #define __LITTLE_ENDIAN 1234
   #define __BIG_ENDIAN    4321
   #define __BYTE_ORDER    __LITTLE_ENDIAN
@@ -37,8 +32,6 @@
     #define PREFETCH(location) _mm_prefetch(location, _MM_HINT_T0)
   #endif
 #else
-  // uint8_t, uint32_t, in32_t
-  #include <stdint.h>
   // defines __BYTE_ORDER as __LITTLE_ENDIAN or __BIG_ENDIAN
   #include <sys/param.h>
 
@@ -68,13 +61,26 @@ static inline uint32_t swap(uint32_t x)
 
 
 /// Slicing-By-16
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
 const size_t MaxSlice = 16;
+#elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8)
+const size_t MaxSlice = 8;
+#elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
+const size_t MaxSlice = 4;
+#elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
+const size_t MaxSlice = 1;
+#else
+  #define NO_LUT // don't need Crc32Lookup at all
+#endif
+
+#ifndef NO_LUT
 /// forward declaration, table is at the end of this file
-extern const uint32_t Crc32Lookup[MaxSlice][256]; // extern is needed to keep compiler happey
+extern const uint32_t Crc32Lookup[MaxSlice][256]; // extern is needed to keep compiler happy
+#endif
 
 
 /// compute CRC32 (bitwise algorithm)
-uint32_t crc32_bitwise(const void* data, size_t length, uint32_t previousCrc32 = 0)
+uint32_t crc32_bitwise(const void* data, size_t length, uint32_t previousCrc32)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
   const uint8_t* current = (const uint8_t*) data;
@@ -101,7 +107,7 @@ uint32_t crc32_bitwise(const void* data, size_t length, uint32_t previousCrc32 =
 
 
 /// compute CRC32 (half-byte algoritm)
-uint32_t crc32_halfbyte(const void* data, size_t length, uint32_t previousCrc32 = 0)
+uint32_t crc32_halfbyte(const void* data, size_t length, uint32_t previousCrc32)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
   const uint8_t* current = (const uint8_t*) data;
@@ -124,21 +130,104 @@ uint32_t crc32_halfbyte(const void* data, size_t length, uint32_t previousCrc32 
 }
 
 
+#ifdef CRC32_USE_LOOKUP_TABLE_BYTE
 /// compute CRC32 (standard algorithm)
-uint32_t crc32_1byte(const void* data, size_t length, uint32_t previousCrc32 = 0)
+uint32_t crc32_1byte(const void* data, size_t length, uint32_t previousCrc32)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
   const uint8_t* current = (const uint8_t*) data;
 
-  while (length-- > 0)
+  while (length-- != 0)
     crc = (crc >> 8) ^ Crc32Lookup[0][(crc & 0xFF) ^ *current++];
+
+  return ~crc; // same as crc ^ 0xFFFFFFFF
+}
+#endif
+
+
+/// compute CRC32 (byte algorithm) without lookup tables
+uint32_t crc32_1byte_tableless(const void* data, size_t length, uint32_t previousCrc32)
+{
+  uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
+  const uint8_t* current = (const uint8_t*) data;
+
+  while (length-- != 0)
+  {
+    uint8_t s = uint8_t(crc) ^ *current++;
+
+    // Hagai Gold made me aware of this table-less algorithm and send me code
+
+    // polynomial 0xEDB88320 can be written in binary as 11101101101110001000001100100000b
+    // reverse the bits (or just assume bit 0 is the first one)
+    // and we have bits set at position 0, 1, 2, 4, 5, 7, 8, 10, 11, 12, 16, 22, 23, 26
+    // => those are the shift offsets:
+    //crc = (crc >> 8) ^
+    //       t ^
+    //      (t >>  1) ^ (t >>  2) ^ (t >>  4) ^ (t >>  5) ^  // == y
+    //      (t >>  7) ^ (t >>  8) ^ (t >> 10) ^ (t >> 11) ^  // == y >> 6
+    //      (t >> 12) ^ (t >> 16) ^                          // == z
+    //      (t >> 22) ^ (t >> 26) ^                          // == z >> 10
+    //      (t >> 23);
+
+    // the fastest I can come up with:
+    uint32_t low = (s ^ (s << 6)) & 0xFF;
+    uint32_t a   = (low * ((1 << 23) + (1 << 14) + (1 << 2)));
+    crc = (crc >> 8) ^
+          (low * ((1 << 24) + (1 << 16) + (1 << 8))) ^
+           a ^
+          (a >> 1) ^
+          (low * ((1 << 20) + (1 << 12)           )) ^
+          (low << 19) ^
+          (low << 17) ^
+          (low >>  2);
+
+    // Hagai's code:
+    /*uint32_t t = (s ^ (s << 6)) << 24;
+
+    // some temporaries to optimize XOR
+    uint32_t x = (t >> 1) ^ (t >> 2);
+    uint32_t y = x ^ (x >> 3);
+    uint32_t z = (t >> 12) ^ (t >> 16);
+
+    crc = (crc >> 8) ^
+           t ^ (t >> 23) ^
+           y ^ (y >>  6) ^
+           z ^ (z >> 10);*/
+  }
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
 
 
+/// compute CRC32 (byte algorithm) without lookup tables
+uint32_t crc32_1byte_tableless2(const void* data, size_t length, uint32_t previousCrc32)
+{
+  int32_t crc = ~previousCrc32; // note: signed integer, right shift distributes sign bit into lower bits
+  const uint8_t* current = (const uint8_t*) data;
+
+  while (length-- != 0)
+  {
+    crc = crc ^ *current++;
+
+    uint32_t c = (((crc << 31) >> 31) & ((Polynomial >> 7)  ^ (Polynomial >> 1))) ^
+                 (((crc << 30) >> 31) & ((Polynomial >> 6)  ^  Polynomial)) ^
+                 (((crc << 29) >> 31) &  (Polynomial >> 5)) ^
+                 (((crc << 28) >> 31) &  (Polynomial >> 4)) ^
+                 (((crc << 27) >> 31) &  (Polynomial >> 3)) ^
+                 (((crc << 26) >> 31) &  (Polynomial >> 2)) ^
+                 (((crc << 25) >> 31) &  (Polynomial >> 1)) ^
+                 (((crc << 24) >> 31) &   Polynomial);
+
+    crc = ((uint32_t)crc >> 8) ^ c; // convert to unsigned integer before right shift
+  }
+
+  return ~crc; // same as crc ^ 0xFFFFFFFF
+}
+
+
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_4
 /// compute CRC32 (Slicing-by-4 algorithm)
-uint32_t crc32_4bytes(const void* data, size_t length, uint32_t previousCrc32 = 0)
+uint32_t crc32_4bytes(const void* data, size_t length, uint32_t previousCrc32)
 {
   uint32_t  crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
   const uint32_t* current = (const uint32_t*) data;
@@ -170,10 +259,12 @@ uint32_t crc32_4bytes(const void* data, size_t length, uint32_t previousCrc32 = 
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
+#endif
 
 
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_8
 /// compute CRC32 (Slicing-by-8 algorithm)
-uint32_t crc32_8bytes(const void* data, size_t length, uint32_t previousCrc32 = 0)
+uint32_t crc32_8bytes(const void* data, size_t length, uint32_t previousCrc32)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
   const uint32_t* current = (const uint32_t*) data;
@@ -218,7 +309,7 @@ uint32_t crc32_8bytes(const void* data, size_t length, uint32_t previousCrc32 = 
 
 
 /// compute CRC32 (Slicing-by-8 algorithm), unroll inner loop 4 times
-uint32_t crc32_4x8bytes(const void* data, size_t length, uint32_t previousCrc32 = 0)
+uint32_t crc32_4x8bytes(const void* data, size_t length, uint32_t previousCrc32)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
   const uint32_t* current = (const uint32_t*) data;
@@ -268,10 +359,12 @@ uint32_t crc32_4x8bytes(const void* data, size_t length, uint32_t previousCrc32 
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
+#endif // CRC32_USE_LOOKUP_TABLE_SLICING_BY_8
 
 
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
 /// compute CRC32 (Slicing-by-16 algorithm)
-uint32_t crc32_16bytes(const void* data, size_t length, uint32_t previousCrc32 = 0)
+uint32_t crc32_16bytes(const void* data, size_t length, uint32_t previousCrc32)
 {
   uint32_t crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
   const uint32_t* current = (const uint32_t*) data;
@@ -342,7 +435,7 @@ uint32_t crc32_16bytes(const void* data, size_t length, uint32_t previousCrc32 =
 
 
 /// compute CRC32 (Slicing-by-16 algorithm, prefetch upcoming data blocks)
-uint32_t crc32_16bytes_prefetch(const void* data, size_t length, uint32_t previousCrc32 = 0, size_t prefetchAhead = 256)
+uint32_t crc32_16bytes_prefetch(const void* data, size_t length, uint32_t previousCrc32, size_t prefetchAhead)
 {
   // CRC code is identical to crc32_16bytes (including unrolling), only added prefetching
   // 256 bytes look-ahead seems to be the sweet spot on Core i7 CPUs
@@ -415,12 +508,23 @@ uint32_t crc32_16bytes_prefetch(const void* data, size_t length, uint32_t previo
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
+#endif
 
 
 /// compute CRC32 using the fastest algorithm for large datasets on modern CPUs
-uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32 = 0)
+uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32)
 {
-  return crc32_16bytes(data, length, previousCrc32);
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
+  return crc32_16bytes (data, length, previousCrc32);
+#elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8)
+  return crc32_8bytes  (data, length, previousCrc32);
+#elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
+  return crc32_4bytes  (data, length, previousCrc32);
+#elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
+  return crc32_1byte   (data, length, previousCrc32);
+#else
+  return crc32_halfbyte(data, length, previousCrc32);
+#endif
 }
 
 
@@ -428,6 +532,7 @@ uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32 = 0)
 // constants
 
 
+#ifndef NO_LUT
 /// look-up table, already declared above
 const uint32_t Crc32Lookup[MaxSlice][256] =
 {
@@ -478,10 +583,11 @@ const uint32_t Crc32Lookup[MaxSlice][256] =
     0xAED16A4A,0xD9D65ADC,0x40DF0B66,0x37D83BF0,0xA9BCAE53,0xDEBB9EC5,0x47B2CF7F,0x30B5FFE9,
     0xBDBDF21C,0xCABAC28A,0x53B39330,0x24B4A3A6,0xBAD03605,0xCDD70693,0x54DE5729,0x23D967BF,
     0xB3667A2E,0xC4614AB8,0x5D681B02,0x2A6F2B94,0xB40BBE37,0xC30C8EA1,0x5A05DF1B,0x2D02EF8D,
-  },
+  }
 
+#if defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_16)
   // beyond this point only relevant for Slicing-by-4, Slicing-by-8 and Slicing-by-16
-  {
+  ,{
     0x00000000,0x191B3141,0x32366282,0x2B2D53C3,0x646CC504,0x7D77F445,0x565AA786,0x4F4196C7,
     0xC8D98A08,0xD1C2BB49,0xFAEFE88A,0xE3F4D9CB,0xACB54F0C,0xB5AE7E4D,0x9E832D8E,0x87981CCF,
     0x4AC21251,0x53D92310,0x78F470D3,0x61EF4192,0x2EAED755,0x37B5E614,0x1C98B5D7,0x05838496,
@@ -584,10 +690,11 @@ const uint32_t Crc32Lookup[MaxSlice][256] =
     0x13CB69D7,0xAB770EB2,0xB9C2A15C,0x017EC639,0x9CA9FE80,0x241599E5,0x36A0360B,0x8E1C516E,
     0x866616A7,0x3EDA71C2,0x2C6FDE2C,0x94D3B949,0x090481F0,0xB1B8E695,0xA30D497B,0x1BB12E1E,
     0x43D23E48,0xFB6E592D,0xE9DBF6C3,0x516791A6,0xCCB0A91F,0x740CCE7A,0x66B96194,0xDE0506F1,
-  },
-
+  }
+#endif // defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_16)
+#if defined (CRC32_USE_LOOKUP_TABLE_SLICING_BY_8) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_16)
   // beyond this point only relevant for Slicing-by-8 and Slicing-by-16
-  {
+  ,{
     0x00000000,0x3D6029B0,0x7AC05360,0x47A07AD0,0xF580A6C0,0xC8E08F70,0x8F40F5A0,0xB220DC10,
     0x30704BC1,0x0D106271,0x4AB018A1,0x77D03111,0xC5F0ED01,0xF890C4B1,0xBF30BE61,0x825097D1,
     0x60E09782,0x5D80BE32,0x1A20C4E2,0x2740ED52,0x95603142,0xA80018F2,0xEFA06222,0xD2C04B92,
@@ -725,10 +832,11 @@ const uint32_t Crc32Lookup[MaxSlice][256] =
     0x50353ED4,0x9C9F3E4A,0x121039A9,0xDEBA3937,0xD47F302E,0x18D530B0,0x965A3753,0x5AF037CD,
     0xFF6B144A,0x33C114D4,0xBD4E1337,0x71E413A9,0x7B211AB0,0xB78B1A2E,0x39041DCD,0xF5AE1D53,
     0x2C8E0FFF,0xE0240F61,0x6EAB0882,0xA201081C,0xA8C40105,0x646E019B,0xEAE10678,0x264B06E6,
-  },
-
+  }
+#endif // CRC32_USE_LOOKUP_TABLE_SLICING_BY_8 || CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
   // beyond this point only relevant for Slicing-by-16
-  {
+  ,{
     0x00000000,0x177B1443,0x2EF62886,0x398D3CC5,0x5DEC510C,0x4A97454F,0x731A798A,0x64616DC9,
     0xBBD8A218,0xACA3B65B,0x952E8A9E,0x82559EDD,0xE634F314,0xF14FE757,0xC8C2DB92,0xDFB9CFD1,
     0xACC04271,0xBBBB5632,0x82366AF7,0x954D7EB4,0xF12C137D,0xE657073E,0xDFDA3BFB,0xC8A12FB8,
@@ -1007,134 +1115,6 @@ const uint32_t Crc32Lookup[MaxSlice][256] =
     0x839B5EED,0x2DF3CF7C,0x043B7B8E,0xAA53EA1F,0x57AA126A,0xF9C283FB,0xD00A3709,0x7E62A698,
     0xF088C1A2,0x5EE05033,0x7728E4C1,0xD9407550,0x24B98D25,0x8AD11CB4,0xA319A846,0x0D7139D7,
   }
+#endif // CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
 };
-
-// //////////////////////////////////////////////////////////
-// test code
-
-
-/// one gigabyte
-const size_t NumBytes = 1024*1024*1024;
-/// 4k chunks during last test
-const size_t DefaultChunkSize = 4*1024;
-
-
-#include <cstdio>
-//#if defined(_MSC_VER) || defined(__CYGWIN__)
-#if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#else
-#include <ctime>
-#endif
-
-// timing
-static double seconds()
-{
-//#if defined(_MSC_VER) || defined(__CYGWIN__)
-#if defined(_WIN32) || defined(_WIN64)
-  LARGE_INTEGER frequency, now;
-  QueryPerformanceFrequency(&frequency);
-  QueryPerformanceCounter  (&now);
-  return now.QuadPart / double(frequency.QuadPart);
-#else
-  timespec now;
-  clock_gettime(CLOCK_REALTIME, &now);
-  return now.tv_sec + now.tv_nsec / 1000000000.0;
-#endif
-}
-
-
-int main(int, char**)
-{
-  printf("Please wait ...\n");
-
-  uint32_t randomNumber = 0x27121978;
-  // initialize
-  char* data = new char[NumBytes];
-  for (size_t i = 0; i < NumBytes; i++)
-  {
-    data[i] = char(randomNumber & 0xFF);
-    // simple LCG, see http://en.wikipedia.org/wiki/Linear_congruential_generator
-    randomNumber = 1664525 * randomNumber + 1013904223;
-  }
-
-  // re-use variables
-  double startTime, duration;
-  uint32_t crc;
-
-  // bitwise
-  startTime = seconds();
-  crc = crc32_bitwise(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("bitwise          : CRC=%08X, %.3fs, %.3f MB/s\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // half-byte
-  startTime = seconds();
-  crc = crc32_halfbyte(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("half-byte        : CRC=%08X, %.3fs, %.3f MB/s\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // one byte at once
-  startTime = seconds();
-  crc = crc32_1byte(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("  1 byte  at once: CRC=%08X, %.3fs, %.3f MB/s\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // four bytes at once
-  startTime = seconds();
-  crc = crc32_4bytes(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("  4 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // eight bytes at once
-  startTime = seconds();
-  crc = crc32_8bytes(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("  8 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // eight bytes at once, unrolled 4 times (=> 32 bytes per loop)
-  startTime = seconds();
-  crc = crc32_4x8bytes(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf("4x8 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // sixteen bytes at once
-  startTime = seconds();
-  crc = crc32_16bytes(data, NumBytes);
-  duration  = seconds() - startTime;
-  printf(" 16 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // sixteen bytes at once
-  startTime = seconds();
-  crc = crc32_16bytes_prefetch(data, NumBytes, 0, 256);
-  duration  = seconds() - startTime;
-  printf(" 16 bytes at once: CRC=%08X, %.3fs, %.3f MB/s (including prefetching)\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  // process in 4k chunks
-  startTime = seconds();
-  crc = 0; // also default parameter of crc32_xx functions
-  size_t bytesProcessed = 0;
-  while (bytesProcessed < NumBytes)
-  {
-    size_t bytesLeft = NumBytes - bytesProcessed;
-    size_t chunkSize = (DefaultChunkSize < bytesLeft) ? DefaultChunkSize : bytesLeft;
-
-    crc = crc32_fast(data + bytesProcessed, chunkSize, crc);
-
-    bytesProcessed += chunkSize;
-  }
-  duration  = seconds() - startTime;
-  printf("    chunked      : CRC=%08X, %.3fs, %.3f MB/s\n",
-         crc, duration, (NumBytes / (1024*1024)) / duration);
-
-  delete[] data;
-  return 0;
-}
+#endif // LO_LUT
