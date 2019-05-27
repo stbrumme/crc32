@@ -1,6 +1,6 @@
 // //////////////////////////////////////////////////////////
 // Crc32Test.cpp
-// Copyright (c) 2016 Stephan Brumme. All rights reserved.
+// Copyright (c) 2016-2019 Stephan Brumme. All rights reserved.
 // see http://create.stephan-brumme.com/disclaimer.html
 //
 
@@ -8,12 +8,18 @@
 #include <cstdlib>
 #include <cstdio>
 
+// the slicing-by-4/8/16 tests are only performed if the corresponding
+// preprocessor symbol is defined in Crc32.h
+// simpler algorithms can be enabled/disabled right here:
+#define CRC32_TEST_BITWISE
+#define CRC32_TEST_HALFBYTE
+#define CRC32_TEST_TABLELESS
 
 // //////////////////////////////////////////////////////////
 // test code
 
 /// one gigabyte
-const size_t NumBytes = 1024*1024*1024;
+const size_t NumBytes = 100 /*1024*/ *1024*1024;
 /// 4k chunks during last test
 const size_t DefaultChunkSize = 4*1024;
 
@@ -61,20 +67,25 @@ int main(int, char**)
   double startTime, duration;
   uint32_t crc;
 
+#ifdef CRC32_TEST_BITWISE
   // bitwise
   startTime = seconds();
   crc = crc32_bitwise(data, NumBytes);
   duration  = seconds() - startTime;
   printf("bitwise          : CRC=%08X, %.3fs, %.3f MB/s\n",
          crc, duration, (NumBytes / (1024*1024)) / duration);
+#endif // CRC32_TEST_BITWISE
 
+#ifdef CRC32_TEST_HALFBYTE
   // half-byte
   startTime = seconds();
   crc = crc32_halfbyte(data, NumBytes);
   duration  = seconds() - startTime;
   printf("half-byte        : CRC=%08X, %.3fs, %.3f MB/s\n",
          crc, duration, (NumBytes / (1024*1024)) / duration);
+#endif // CRC32_TEST_HALFBYTE
 
+#ifdef CRC32_TEST_TABLELESS
   // one byte at once (without lookup tables)
   startTime = seconds();
   crc = crc32_1byte_tableless(data, NumBytes);
@@ -88,6 +99,7 @@ int main(int, char**)
   duration  = seconds() - startTime;
   printf("tableless (byte2): CRC=%08X, %.3fs, %.3f MB/s\n",
          crc, duration, (NumBytes / (1024*1024)) / duration);
+#endif // CRC32_TEST_TABLELESS
 
 #ifdef CRC32_USE_LOOKUP_TABLE_BYTE
   // one byte at once
@@ -96,7 +108,7 @@ int main(int, char**)
   duration  = seconds() - startTime;
   printf("  1 byte  at once: CRC=%08X, %.3fs, %.3f MB/s\n",
          crc, duration, (NumBytes / (1024*1024)) / duration);
-#endif
+#endif // CRC32_USE_LOOKUP_TABLE_BYTE
 
 #ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_4
   // four bytes at once

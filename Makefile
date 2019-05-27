@@ -1,18 +1,23 @@
-PROGRAM=Crc32Test
-LIBS=-lrt
-HEADERS=Crc32.h
-OBJECTS=Crc32.o Crc32Test.o
-FLAGS=-O3 -Wall -pedantic -s
-LINKFLAGS=-s
-CPP=g++
+# simple Makefile
+CPP       = g++
+
+# files
+PROGRAM   = Crc32Test
+LIBS      = -lrt
+HEADERS   = Crc32.h
+OBJECTS   = Crc32.o Crc32Test.o
+
+# flags
+FLAGS     = -O3 -Wall -pedantic -s
+LINKFLAGS = -s
 
 default: $(PROGRAM)
 all: default
 
-Crc32Test: $(OBJECTS)
+$(PROGRAM): $(OBJECTS) Makefile
 	$(CPP) $(OBJECTS) $(LIBS) -o $(PROGRAM)
 
-%.o: %.cpp $(HEADERS)
+%.o: %.cpp $(HEADERS) Makefile
 	$(CPP) $(LINKFLAGS) -c $< -o $@
 
 clean:

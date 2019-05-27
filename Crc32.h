@@ -1,6 +1,6 @@
 // //////////////////////////////////////////////////////////
 // Crc32.h
-// Copyright (c) 2011-2016 Stephan Brumme. All rights reserved.
+// Copyright (c) 2011-2019 Stephan Brumme. All rights reserved.
 // Slicing-by-16 contributed by Bulat Ziganshin
 // Tableless bytewise CRC contributed by Hagai Gold
 // see http://create.stephan-brumme.com/disclaimer.html
@@ -9,7 +9,7 @@
 // if running on an embedded system, you might consider shrinking the
 // big Crc32Lookup table by undefining these lines:
 #define CRC32_USE_LOOKUP_TABLE_BYTE
-#define CRC32_USE_LOOKUP_TABLE_SLICING_BY_8
+#define CRC32_USE_LOOKUP_TABLE_SLICING_BY_4
 #define CRC32_USE_LOOKUP_TABLE_SLICING_BY_8
 #define CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
 // - crc32_bitwise  doesn't need it at all
@@ -20,7 +20,7 @@
 // - crc32_8bytes   needs only Crc32Lookup[0..7]
 // - crc32_4x8bytes needs only Crc32Lookup[0..7]
 // - crc32_16bytes  needs all of Crc32Lookup
-// using the aforementioned #defines the the table is automatically fitted to your needs
+// using the aforementioned #defines the table is automatically fitted to your needs
 
 // uint8_t, uint32_t, int32_t
 #include <stdint.h>
@@ -29,7 +29,7 @@
 
 // crc32_fast selects the fastest algorithm depending on flags (CRC32_USE_LOOKUP_...)
 /// compute CRC32 using the fastest algorithm for large datasets on modern CPUs
-uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32 = 0);
+uint32_t crc32_fast    (const void* data, size_t length, uint32_t previousCrc32 = 0);
 
 /// compute CRC32 (bitwise algorithm)
 uint32_t crc32_bitwise (const void* data, size_t length, uint32_t previousCrc32 = 0);

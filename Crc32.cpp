@@ -1,6 +1,6 @@
 // //////////////////////////////////////////////////////////
 // Crc32.cpp
-// Copyright (c) 2011-2016 Stephan Brumme. All rights reserved.
+// Copyright (c) 2011-2019 Stephan Brumme. All rights reserved.
 // Slicing-by-16 contributed by Bulat Ziganshin
 // Tableless bytewise CRC contributed by Hagai Gold
 // see http://create.stephan-brumme.com/disclaimer.html
@@ -38,6 +38,7 @@
   #ifdef __GNUC__
     #define PREFETCH(location) __builtin_prefetch(location)
   #else
+    // no prefetching
     #define PREFETCH(location) ;
   #endif
 #endif
