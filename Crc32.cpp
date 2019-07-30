@@ -48,6 +48,7 @@
 const uint32_t Polynomial = 0xEDB88320;
 
 /// swap endianess
+#if __BYTE_ORDER == __BIG_ENDIAN
 static inline uint32_t swap(uint32_t x)
 {
 #if defined(__GNUC__) || defined(__clang__)
@@ -59,6 +60,7 @@ static inline uint32_t swap(uint32_t x)
          (x << 24);
 #endif
 }
+#endif
 
 
 /// Slicing-By-16
