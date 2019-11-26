@@ -24,7 +24,6 @@ const size_t NumBytes = 100 /*1024*/ *1024*1024;
 const size_t DefaultChunkSize = 4*1024;
 
 
-#include <cstdio>
 //#if defined(_MSC_VER) || defined(__CYGWIN__)
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
