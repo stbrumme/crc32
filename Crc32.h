@@ -23,9 +23,9 @@
 // using the aforementioned #defines the table is automatically fitted to your needs
 
 // uint8_t, uint32_t, int32_t
-#include <stdint.h>
+#include <cstdint>
 // size_t
-#include <stddef.h>
+#include <cstddef>
 
 // crc32_fast selects the fastest algorithm depending on flags (CRC32_USE_LOOKUP_...)
 /// compute CRC32 using the fastest algorithm for large datasets on modern CPUs
