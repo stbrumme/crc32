@@ -1118,4 +1118,4 @@ const uint32_t Crc32Lookup[MaxSlice][256] =
   }
 #endif // CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
 };
-#endif // LO_LUT
+#endif // NO_LUT
