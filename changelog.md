@@ -1,7 +1,13 @@
 # Changelog
 This file tracks the main changes to my CRC32 library.
+
 project website: https://create.stephan-brumme.com/crc32/
 GitHub mirror:   https://github.com/stbrumme/crc32/
+
+## November 27, 2019
+- use C++'s include names
+- removed warning on little-endian systems
+- fixed typo in comments
 
 ## May      27, 2019 (version 8)
 - fixed misspelt preprocessor symbol
