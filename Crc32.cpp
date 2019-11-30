@@ -35,6 +35,11 @@
   // defines __BYTE_ORDER as __LITTLE_ENDIAN or __BIG_ENDIAN
   #include <sys/param.h>
 
+  #if !defined(__BYTE_ORDER) && defined(BYTE_ORDER) && !defined(__BIG_ENDIAN) && defined(BIG_ENDIAN)
+    #define __BYTE_ORDER BYTE_ORDER
+    #define __BIG_ENDIAN BIG_ENDIAN
+  #endif
+
   #ifdef __GNUC__
     #define PREFETCH(location) __builtin_prefetch(location)
   #else
@@ -43,6 +48,9 @@
   #endif
 #endif
 
+#if !defined(__BYTE_ORDER) || !defined(__BIG_ENDIAN)
+#error byte order is not defined
+#endif
 
 /// zlib's CRC32 polynomial
 const uint32_t Polynomial = 0xEDB88320;
