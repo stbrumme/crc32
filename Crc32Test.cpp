@@ -19,12 +19,11 @@
 // test code
 
 /// one gigabyte
-const size_t NumBytes = 100 /*1024*/ *1024*1024;
+const size_t NumBytes = 1024*1024*1024;
 /// 4k chunks during last test
 const size_t DefaultChunkSize = 4*1024;
 
 
-//#if defined(_MSC_VER) || defined(__CYGWIN__)
 #if defined(_WIN32) || defined(_WIN64)
 #include <windows.h>
 #else
@@ -34,7 +33,6 @@ const size_t DefaultChunkSize = 4*1024;
 // timing
 static double seconds()
 {
-//#if defined(_MSC_VER) || defined(__CYGWIN__)
 #if defined(_WIN32) || defined(_WIN64)
   LARGE_INTEGER frequency, now;
   QueryPerformanceFrequency(&frequency);

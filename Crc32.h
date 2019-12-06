@@ -31,6 +31,9 @@
 /// compute CRC32 using the fastest algorithm for large datasets on modern CPUs
 uint32_t crc32_fast    (const void* data, size_t length, uint32_t previousCrc32 = 0);
 
+/// merge two CRC32 such that result = crc32(dataB, lengthB, crc32(dataA, lengthA))
+uint32_t crc32_combine (uint32_t crcA, uint32_t crcB, size_t lengthB);
+
 /// compute CRC32 (bitwise algorithm)
 uint32_t crc32_bitwise (const void* data, size_t length, uint32_t previousCrc32 = 0);
 /// compute CRC32 (half-byte algoritm)

@@ -4,6 +4,9 @@ This file tracks the main changes to my CRC32 library.
 project website: https://create.stephan-brumme.com/crc32/
 GitHub mirror:   https://github.com/stbrumme/crc32/
 
+## December  6, 2019 (version 9)
+- added support for multi-threaded computation
+
 ## November 27, 2019
 - use C++'s include names
 - removed warning on little-endian systems

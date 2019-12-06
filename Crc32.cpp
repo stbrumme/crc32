@@ -19,12 +19,19 @@
 
 #include "Crc32.h"
 
+#ifndef __LITTLE_ENDIAN
+  #define __LITTLE_ENDIAN 1234
+#endif
+#ifndef __BIG_ENDIAN
+  #define __BIG_ENDIAN    4321
+#endif
+
 // define endianess and some integer data types
 #if defined(_MSC_VER) || defined(__MINGW32__)
-  #define __LITTLE_ENDIAN 1234
-  #define __BIG_ENDIAN    4321
-  #define __BYTE_ORDER    __LITTLE_ENDIAN
+  // Windows always little endian
+  #define __BYTE_ORDER __LITTLE_ENDIAN
 
+  // intrinsics / prefetching
   #include <xmmintrin.h>
   #ifdef __MINGW32__
     #define PREFETCH(location) __builtin_prefetch(location)
@@ -35,6 +42,7 @@
   // defines __BYTE_ORDER as __LITTLE_ENDIAN or __BIG_ENDIAN
   #include <sys/param.h>
 
+  // intrinsics / prefetching
   #ifdef __GNUC__
     #define PREFETCH(location) __builtin_prefetch(location)
   #else
@@ -43,38 +51,44 @@
   #endif
 #endif
 
+// abort if byte order is undefined
+#if !defined(__BYTE_ORDER)
+#error undefined byte order, compile with -D__BYTE_ORDER=1234 (if little endian) or -D__BYTE_ORDER=4321 (big endian)
+#endif
 
-/// zlib's CRC32 polynomial
-const uint32_t Polynomial = 0xEDB88320;
 
-/// swap endianess
-#if __BYTE_ORDER == __BIG_ENDIAN
-static inline uint32_t swap(uint32_t x)
+namespace
 {
-#if defined(__GNUC__) || defined(__clang__)
-  return __builtin_bswap32(x);
-#else
-  return (x >> 24) |
-        ((x >>  8) & 0x0000FF00) |
-        ((x <<  8) & 0x00FF0000) |
-         (x << 24);
-#endif
-}
-#endif
+  /// zlib's CRC32 polynomial
+  const uint32_t Polynomial = 0xEDB88320;
 
+  /// swap endianess
+  static inline uint32_t swap(uint32_t x)
+  {
+  #if defined(__GNUC__) || defined(__clang__)
+    return __builtin_bswap32(x);
+  #else
+    return (x >> 24) |
+          ((x >>  8) & 0x0000FF00) |
+          ((x <<  8) & 0x00FF0000) |
+           (x << 24);
+  #endif
+  }
 
-/// Slicing-By-16
-#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
-const size_t MaxSlice = 16;
-#elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8)
-const size_t MaxSlice = 8;
-#elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
-const size_t MaxSlice = 4;
-#elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
-const size_t MaxSlice = 1;
-#else
-  #define NO_LUT // don't need Crc32Lookup at all
-#endif
+  /// Slicing-By-16
+  #ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
+  const size_t MaxSlice = 16;
+  #elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8)
+  const size_t MaxSlice = 8;
+  #elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
+  const size_t MaxSlice = 4;
+  #elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
+  const size_t MaxSlice = 1;
+  #else
+    #define NO_LUT // don't need Crc32Lookup at all
+  #endif
+
+} // anonymous namespace
 
 #ifndef NO_LUT
 /// forward declaration, table is at the end of this file
@@ -528,6 +542,108 @@ uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32)
 #else
   return crc32_halfbyte(data, length, previousCrc32);
 #endif
+}
+
+
+/// merge two CRC32 such that result = crc32(dataB, lengthB, crc32(dataA, lengthA))
+uint32_t crc32_combine(uint32_t crcA, uint32_t crcB, size_t lengthB)
+{
+  // based on Mark Adler's crc_combine from
+  // https://github.com/madler/pigz/blob/master/pigz.c
+
+  // main idea:
+  // - if you have two equally-sized blocks A and B,
+  //   then you can create a block C = A ^ B
+  //   which has the property crc(C) = crc(A) ^ crc(B)
+  // - if you append length(B) zeros to A and call it A' (think of it as AAAA000)
+  //   and   prepend length(A) zeros to B and call it B' (think of it as 0000BBB)
+  //   then exists a C' = A' ^ B'
+  // - remember: if you XOR someting with zero, it remains unchanged: X ^ 0 = X
+  // - that means C' = A concat B so that crc(A concat B) = crc(C') = crc(A') ^ crc(B')
+  // - the trick is to compute crc(A') based on crc(A)
+  //                       and crc(B') based on crc(B)
+  // - since B' starts with many zeros, the crc of those initial zeros is still zero
+  // - that means crc(B') = crc(B)
+  // - unfortunately the trailing zeros of A' change the crc, so usually crc(A') != crc(A)
+  // - the following code is a fast algorithm to compute crc(A')
+  // - starting with crc(A) and appending length(B) zeros, needing just log2(length(B)) iterations
+  // - the details are explained by the original author at
+  //   https://stackoverflow.com/questions/23122312/crc-calculation-of-a-mostly-static-data-stream/23126768
+  //
+  // notes:
+  // - I squeezed everything into one function to keep global namespace clean (original code two helper functions)
+  // - most original comments are still in place, I added comments where these helper functions where made inline code
+  // - performance-wise there isn't any differenze to the original zlib/pigz code
+
+  // degenerated case
+  if (lengthB == 0)
+    return crcA;
+
+  /// CRC32 => 32 bits
+  const uint32_t CrcBits = 32;
+
+  uint32_t odd [CrcBits]; // odd-power-of-two  zeros operator
+  uint32_t even[CrcBits]; // even-power-of-two zeros operator
+
+  // put operator for one zero bit in odd
+  odd[0] = Polynomial;    // CRC-32 polynomial
+  for (int i = 1; i < CrcBits; i++)
+    odd[i] = 1 << (i - 1);
+
+  // put operator for two zero bits in even
+  // same as gf2_matrix_square(even, odd);
+  for (int i = 0; i < CrcBits; i++)
+  {
+    uint32_t vec = odd[i];
+    even[i] = 0;
+    for (int j = 0; vec != 0; j++, vec >>= 1)
+      if (vec & 1)
+        even[i] ^= odd[j];
+  }
+  // put operator for four zero bits in odd
+  // same as gf2_matrix_square(odd, even);
+  for (int i = 0; i < CrcBits; i++)
+  {
+    uint32_t vec = even[i];
+    odd[i] = 0;
+    for (int j = 0; vec != 0; j++, vec >>= 1)
+      if (vec & 1)
+        odd[i] ^= even[j];
+  }
+
+  // the following loop becomes much shorter if I keep swapping even and odd
+  uint32_t* a = even;
+  uint32_t* b = odd;
+  // apply secondLength zeros to firstCrc32
+  for (; lengthB > 0; lengthB >>= 1)
+  {
+    // same as gf2_matrix_square(a, b);
+    for (int i = 0; i < CrcBits; i++)
+    {
+      uint32_t vec = b[i];
+      a[i] = 0;
+      for (int j = 0; vec != 0; j++, vec >>= 1)
+        if (vec & 1)
+          a[i] ^= b[j];
+    }
+
+    // apply zeros operator for this bit
+    if (lengthB & 1)
+    {
+      // same as firstCrc32 = gf2_matrix_times(a, firstCrc32);
+      uint32_t sum = 0;
+      for (int i = 0; crcA != 0; i++, crcA >>= 1)
+        if (crcA & 1)
+          sum ^= a[i];
+      crcA = sum;
+    }
+
+    // switch even and odd
+    uint32_t* t = a; a = b; b = t;
+  }
+
+  // return combined crc
+  return crcA ^ crcB;
 }
 
 
