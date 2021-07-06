@@ -103,7 +103,7 @@ bool testCombine(const char* data, size_t maxBytes = 1024)
     // check results
     if (crcAtOnce != crcSequential || crcAtOnce != crcCombined)
     {
-      printf("FAILED @ %d: %08X %08X %08X %08X %08X\n", lengthA, crcA, crcB, crcAtOnce, crcSequential, crcCombined);
+      printf("FAILED @ %zu: %08X %08X %08X %08X %08X\n", lengthA, crcA, crcB, crcAtOnce, crcSequential, crcCombined);
       ok = false;
     }
   }
