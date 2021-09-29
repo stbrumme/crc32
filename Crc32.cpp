@@ -66,6 +66,7 @@ namespace
   /// zlib's CRC32 polynomial
   const uint32_t Polynomial = 0xEDB88320;
 
+#if __BYTE_ORDER == __BIG_ENDIAN
   /// swap endianess
   static inline uint32_t swap(uint32_t x)
   {
@@ -78,6 +79,7 @@ namespace
            (x << 24);
   #endif
   }
+#endif
 
   /// Slicing-By-16
   #ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
