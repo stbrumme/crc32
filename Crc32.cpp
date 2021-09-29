@@ -32,11 +32,15 @@
   #define __BYTE_ORDER __LITTLE_ENDIAN
 
   // intrinsics / prefetching
-  #include <xmmintrin.h>
-  #ifdef __MINGW32__
+  #if defined(__MINGW32__) || defined(__clang__)
     #define PREFETCH(location) __builtin_prefetch(location)
   #else
-    #define PREFETCH(location) _mm_prefetch(location, _MM_HINT_T0)
+    #if defined(__SSE2__)
+      #include <xmmintrin.h>
+      #define PREFETCH(location) _mm_prefetch(location, _MM_HINT_T0)
+    #else
+      #define PREFETCH(location) ;
+    #endif
   #endif
 #else
   // defines __BYTE_ORDER as __LITTLE_ENDIAN or __BIG_ENDIAN
