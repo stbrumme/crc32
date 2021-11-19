@@ -30,7 +30,7 @@ This is a mirror of my CRC32 library hosted at https://create.stephan-brumme.com
 | crc32_16bytes_prefetch / crc32::crc32_16bytes_prefetch | 1.0.0   | Bulat Ziganshin  | 1 or 1.5        | 512       | 8 KB       | 6102   |
 | crc32_fast / crc32::crc32_fast                         | 1.0.0   | None             | varies          | varies    | varies     | varies |
 
-Tested on Legion 5 Pro:
+Tested on Lenovo Legion 5 Pro:
 - Manjaro 21.1.6
 - Clang 12.0.1
 - Build type: Release
