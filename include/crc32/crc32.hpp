@@ -14,9 +14,8 @@ extern "C" {
 
 #include "crc32/crc32.h"
 #include "crc32/crc32_var.h"
-}
-// size_t
-#include <cstddef>
+
+#include <cstddef> // size_t
 
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
 #  include <string_view>

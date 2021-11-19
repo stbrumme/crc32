@@ -46,7 +46,7 @@ jobs:
     # placeholder to your GitHub name.
     # If you do not wish to use codecov, then simply delete this job from the
     # workflow.
-    if: github.repository_owner == 'bensuperpc'
+    if: github.repository_owner == 'Name'
       && false
 
     steps:
@@ -175,7 +175,7 @@ jobs:
     # If you do not wish to use GitHub Pages for deploying documentation, then
     # simply delete this job similarly to the coverage one.
     if: github.ref == 'refs/heads/main'
-      && github.repository_owner == 'bensuperpc'
+      && github.repository_owner == 'Name'
       && false
 
     steps:
