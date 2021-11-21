@@ -1,5 +1,10 @@
 # Fast CRC32
-This is a mirror of my CRC32 library hosted at https://create.stephan-brumme.com/crc32/
+
+Fast CRC32 library, based on the work of Stephan Brumme (https://create.stephan-brumme.com/crc32/).
+
+[![Continuous Integration](https://github.com/bensuperpc/crc32/actions/workflows/base.yml/badge.svg)](https://github.com/bensuperpc/crc32/actions/workflows/base.yml) [![Dockcross CI](https://github.com/bensuperpc/crc32/actions/workflows/dockcross.yml/badge.svg)](https://github.com/bensuperpc/crc32/actions/workflows/dockcross.yml)
+
+[![linux](https://github.com/bensuperpc/crc32/actions/workflows/linux.yml/badge.svg)](https://github.com/bensuperpc/crc32/actions/workflows/linux.yml) [![windows](https://github.com/bensuperpc/crc32/actions/workflows/windows.yml/badge.svg)](https://github.com/bensuperpc/crc32/actions/workflows/windows.yml) [![macos](https://github.com/bensuperpc/crc32/actions/workflows/macos.yml/badge.svg)](https://github.com/bensuperpc/crc32/actions/workflows/macos.yml)
 
 ## Features
 

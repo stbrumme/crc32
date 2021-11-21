@@ -10,12 +10,14 @@
 
 // uint8_t, uint32_t, int32_t
 extern "C" {
-#include <cstddef>  // size_t
-
 #include <stdint.h>
 
 #include "crc32/crc32.h"
 #include "crc32/crc32_var.h"
+}
+
+#include <cstddef>  // size_t
+
 
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
 #  include <string_view>
