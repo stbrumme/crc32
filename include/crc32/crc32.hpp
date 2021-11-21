@@ -18,7 +18,6 @@ extern "C" {
 
 #include <cstddef>  // size_t
 
-
 #if ((defined(_MSVC_LANG) && _MSVC_LANG >= 201703L) || __cplusplus >= 201703L)
 #  include <string_view>
 #else
