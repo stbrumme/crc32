@@ -10,33 +10,35 @@
 
 // //////////////////////////////////////////////////////////
 // constants
-const uint32_t Polynomial = 0xEDB88320;
+const uint32_t crc32_global_polynomial = 0xEDB88320;
 
 #ifndef NO_LUT
 #  ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
-const uint32_t Crc32Lookup[16][256] = {
+const uint32_t crc32_global_crc32Lookup[16][256] = {
 #  elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8)
-const uint32_t Crc32Lookup[8][256] = {
+const uint32_t crc32_global_crc32Lookup[8][256] = {
 #  elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
-const uint32_t Crc32Lookup[4][256] = {
+const uint32_t crc32_global_crc32Lookup[4][256] = {
 #  elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
-const uint32_t Crc32Lookup[1][256] = {
+const uint32_t crc32_global_crc32Lookup[1][256] = {
 #  endif
     //// same algorithm as crc32_bitwise
     // for (int i = 0; i <= 0xFF; i++)
     //{
     //  uint32_t crc = i;
     //  for (int j = 0; j < 8; j++)
-    //    crc = (crc >> 1) ^ ((crc & 1) * Polynomial);
-    //  Crc32Lookup[0][i] = crc;
+    //    crc = (crc >> 1) ^ ((crc & 1) * crc32_global_polynomial);
+    //  crc32_global_crc32Lookup[0][i] = crc;
     //}
     //// ... and the following slicing-by-8 algorithm (from Intel):
     ////
     /// http://www.intel.com/technology/comms/perfnet/download/CRC_generators.pdf
     //// http://sourceforge.net/projects/slicing-by-8/
     // for (int slice = 1; slice < MaxSlice; slice++)
-    //  Crc32Lookup[slice][i] = (Crc32Lookup[slice - 1][i] >> 8) ^
-    //  Crc32Lookup[0][Crc32Lookup[slice - 1][i] & 0xFF];
+    //  crc32_global_crc32Lookup[slice][i] = (crc32_global_crc32Lookup[slice -
+    //  1][i] >> 8) ^
+    //  crc32_global_crc32Lookup[0][crc32_global_crc32Lookup[slice - 1][i] &
+    //  0xFF];
     {
         // note: the first number of every second row corresponds to the
         // half-byte look-up table !
