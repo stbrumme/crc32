@@ -10,7 +10,7 @@
 #define CRC32_VAR_H_INCLUDED
 
 // if running on an embedded system, you might consider shrinking the
-// big Crc32Lookup table by undefining these lines:
+// big crc32_global_crc32Lookup table by undefining these lines:
 
 // #define CRC32_USE_LOOKUP_TABLE_BYTE
 // #define CRC32_USE_LOOKUP_TABLE_SLICING_BY_4
@@ -21,11 +21,11 @@
 // - crc32_bitwise_branch  doesn't need it at all
 // - crc32_halfbyte has its own small lookup table
 // - crc32_1byte_tableless and crc32_1byte_tableless2 don't need it at all
-// - crc32_1byte    needs only Crc32Lookup[0]
-// - crc32_4bytes   needs only Crc32Lookup[0..3]
-// - crc32_8bytes   needs only Crc32Lookup[0..7]
-// - crc32_4x8bytes needs only Crc32Lookup[0..7]
-// - crc32_16bytes  needs all of Crc32Lookup
+// - crc32_1byte    needs only crc32_global_crc32Lookup[0]
+// - crc32_4bytes   needs only crc32_global_crc32Lookup[0..3]
+// - crc32_8bytes   needs only crc32_global_crc32Lookup[0..7]
+// - crc32_4x8bytes needs only crc32_global_crc32Lookup[0..7]
+// - crc32_16bytes  needs all of crc32_global_crc32Lookup
 // using the aforementioned #defines the table is automatically fitted to your
 // needs
 
@@ -101,17 +101,17 @@ static inline uint32_t swap(uint32_t x)
 // constants
 
 /// zlib's CRC32 polynomial
-extern const uint32_t Polynomial;
+extern const uint32_t crc32_global_polynomial;
 
 #ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
-extern const uint32_t Crc32Lookup[16][256];
+extern const uint32_t crc32_global_crc32Lookup[16][256];
 #elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8)
-extern const uint32_t Crc32Lookup[8][256];
+extern const uint32_t crc32_global_crc32Lookup[8][256];
 #elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
-extern const uint32_t Crc32Lookup[4][256];
+extern const uint32_t crc32_global_crc32Lookup[4][256];
 #elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
-extern const uint32_t Crc32Lookup[1][256];
+extern const uint32_t crc32_global_crc32Lookup[1][256];
 #else
-#  define NO_LUT  // don't need Crc32Lookup at all
+#  define NO_LUT  // don't need crc32_global_crc32Lookup at all
 #endif
 #endif  // CRC32_VAR_H_INCLUDED

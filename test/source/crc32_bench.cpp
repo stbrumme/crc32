@@ -58,7 +58,7 @@ std::string random_string(std::string::size_type length)
 static void crc32_fast_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -68,7 +68,7 @@ static void crc32_fast_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 
   // state.SetLabel("OK");
 }
@@ -80,8 +80,8 @@ BENCHMARK(crc32_fast_c_bench)
 static void crc32_fast_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -89,7 +89,7 @@ static void crc32_fast_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 
   // state.SetLabel("OK");
 }
@@ -101,7 +101,7 @@ BENCHMARK(crc32_fast_bench)
 static void crc32_bitwise_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -110,7 +110,7 @@ static void crc32_bitwise_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_bitwise_c_bench)
     ->Name("crc32_bitwise_c")
@@ -120,8 +120,8 @@ BENCHMARK(crc32_bitwise_c_bench)
 static void crc32_bitwise_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -129,7 +129,7 @@ static void crc32_bitwise_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 
   // state.SetLabel("OK");
 }
@@ -141,7 +141,7 @@ BENCHMARK(crc32_bitwise_bench)
 static void crc32_bitwise_branch_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -150,7 +150,7 @@ static void crc32_bitwise_branch_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_bitwise_branch_c_bench)
     ->Name("crc32_bitwise_c_branch")
@@ -160,8 +160,8 @@ BENCHMARK(crc32_bitwise_branch_c_bench)
 static void crc32_bitwise_branch_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -169,7 +169,7 @@ static void crc32_bitwise_branch_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 
   // state.SetLabel("OK");
 }
@@ -181,7 +181,7 @@ BENCHMARK(crc32_bitwise_branch_bench)
 static void crc32_halfbyte_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -190,7 +190,7 @@ static void crc32_halfbyte_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_halfbyte_c_bench)
     ->Name("crc32_halfbyte_c")
@@ -200,8 +200,8 @@ BENCHMARK(crc32_halfbyte_c_bench)
 static void crc32_halfbyte_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -209,7 +209,7 @@ static void crc32_halfbyte_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 
   // state.SetLabel("OK");
 }
@@ -223,7 +223,7 @@ BENCHMARK(crc32_halfbyte_bench)
 static void crc32_1byte_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -232,7 +232,7 @@ static void crc32_1byte_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_1byte_c_bench)
     ->Name("crc32_1byte_c")
@@ -242,8 +242,8 @@ BENCHMARK(crc32_1byte_c_bench)
 static void crc32_1byte_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -251,7 +251,7 @@ static void crc32_1byte_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 
   // state.SetLabel("OK");
 }
@@ -263,7 +263,7 @@ BENCHMARK(crc32_1byte_bench)
 static void crc32_1byte_tableless_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -272,7 +272,7 @@ static void crc32_1byte_tableless_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_1byte_tableless_c_bench)
     ->Name("crc32_1byte_tableless_c")
@@ -282,8 +282,8 @@ BENCHMARK(crc32_1byte_tableless_c_bench)
 static void crc32_1byte_tableless_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -291,7 +291,7 @@ static void crc32_1byte_tableless_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 
   // state.SetLabel("OK");
 }
@@ -303,7 +303,7 @@ BENCHMARK(crc32_1byte_tableless_bench)
 static void crc32_1byte_tableless2_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -312,7 +312,7 @@ static void crc32_1byte_tableless2_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_1byte_tableless2_c_bench)
     ->Name("crc32_1byte_tableless2_c")
@@ -322,8 +322,8 @@ BENCHMARK(crc32_1byte_tableless2_c_bench)
 static void crc32_1byte_tableless2_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -331,7 +331,7 @@ static void crc32_1byte_tableless2_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_1byte_tableless2_bench)
     ->Name("crc32_1byte_tableless2")
@@ -345,7 +345,7 @@ BENCHMARK(crc32_1byte_tableless2_bench)
 static void crc32_4bytes_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -354,7 +354,7 @@ static void crc32_4bytes_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_4bytes_c_bench)
     ->Name("crc32_4bytes_c")
@@ -364,8 +364,8 @@ BENCHMARK(crc32_4bytes_c_bench)
 static void crc32_4bytes_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -373,7 +373,7 @@ static void crc32_4bytes_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_4bytes_bench)
     ->Name("crc32_4bytes")
@@ -387,7 +387,7 @@ BENCHMARK(crc32_4bytes_bench)
 static void crc32_8bytes_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -396,7 +396,7 @@ static void crc32_8bytes_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_8bytes_c_bench)
     ->Name("crc32_8bytes_c")
@@ -406,8 +406,8 @@ BENCHMARK(crc32_8bytes_c_bench)
 static void crc32_8bytes_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -415,7 +415,7 @@ static void crc32_8bytes_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_8bytes_bench)
     ->Name("crc32_8bytes")
@@ -425,7 +425,7 @@ BENCHMARK(crc32_8bytes_bench)
 static void crc32_4x8bytes_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -434,7 +434,7 @@ static void crc32_4x8bytes_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_4x8bytes_c_bench)
     ->Name("crc32_4x8bytes_c")
@@ -444,8 +444,8 @@ BENCHMARK(crc32_4x8bytes_c_bench)
 static void crc32_4x8bytes_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -453,7 +453,7 @@ static void crc32_4x8bytes_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_4x8bytes_bench)
     ->Name("crc32_4x8bytes")
@@ -467,7 +467,7 @@ BENCHMARK(crc32_4x8bytes_bench)
 static void crc32_16bytes_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -476,7 +476,7 @@ static void crc32_16bytes_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_16bytes_c_bench)
     ->Name("crc32_16bytes_c")
@@ -486,8 +486,8 @@ BENCHMARK(crc32_16bytes_c_bench)
 static void crc32_16bytes_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -495,7 +495,7 @@ static void crc32_16bytes_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_16bytes_bench)
     ->Name("crc32_16bytes")
@@ -505,7 +505,7 @@ BENCHMARK(crc32_16bytes_bench)
 static void crc32_16bytes_prefetch_c_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
+  const auto size = state.range(0);
   auto str = generate(size);
 
   for (auto _ : state) {
@@ -514,7 +514,7 @@ static void crc32_16bytes_prefetch_c_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_16bytes_prefetch_c_bench)
     ->Name("crc32_16bytes_prefetch_c")
@@ -524,8 +524,8 @@ BENCHMARK(crc32_16bytes_prefetch_c_bench)
 static void crc32_16bytes_prefetch_bench(benchmark::State& state)
 {
   // Code inside this loop is measured repeatedly
-  auto size = state.range(0);
-  std::string&& str = random_string(size);
+  const auto size = state.range(0);
+  const std::string&& str = random_string(size);
 
   for (auto _ : state) {
     benchmark::DoNotOptimize(str);
@@ -533,7 +533,7 @@ static void crc32_16bytes_prefetch_bench(benchmark::State& state)
     benchmark::ClobberMemory();
   }
   state.SetItemsProcessed(state.iterations());
-  state.SetBytesProcessed(state.iterations() * state.range(0) * sizeof(char));
+  state.SetBytesProcessed(state.iterations() * size * sizeof(char));
 }
 BENCHMARK(crc32_16bytes_prefetch_bench)
     ->Name("crc32_16bytes_prefetch")

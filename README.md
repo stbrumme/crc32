@@ -32,7 +32,7 @@ Fast CRC32 library, based on the work of Stephan Brumme (https://create.stephan-
 | crc32_8bytes / crc32::crc32_8bytes                     | 1.0.0   | Intel Corp.      | 3 or 4          | 64        | 8 KB       | 2629   |
 | crc32_4x8bytes / crc32::crc32_4x8bytes                 | 1.0.0   | ?                | 1.75 or 2.25    | 256       | 8 KB       | 3003   |
 | crc32_16bytes / crc32::crc32_16bytes                   | 1.0.0   | Bulat Ziganshin  | 1.1 or 1.5      | 128       | 16 KB      | 6027   |
-| crc32_16bytes_prefetch / crc32::crc32_16bytes_prefetch | 1.0.0   | Bulat Ziganshin  | 1 or 1.5        | 512       | 8 KB       | 6102   |
+| crc32_16bytes_prefetch / crc32::crc32_16bytes_prefetch | 1.0.0   | Bulat Ziganshin  | 1 or 1.5        | 512       | 16 KB      | 6102   |
 | crc32_fast / crc32::crc32_fast                         | 1.0.0   | None             | varies          | varies    | varies     | varies |
 
 Tested on Lenovo Legion 5 Pro:

@@ -10,33 +10,78 @@
 
 // //////////////////////////////////////////////////////////
 // constants
-const uint32_t Polynomial = 0xEDB88320;
+
+/* CRC-32C (iSCSI) polynomial in reversed bit order. */
+// const uint32_t crc32_global_polynomial = 0x82F63B78; // you need to update
+// crc32_global_crc32Lookup if you change this value
+
+/* CRC-32 (Ethernet, ZIP, etc.) polynomial in reversed bit order. */
+const uint32_t crc32_global_polynomial =
+    0xEDB88320;  // you need to update crc32_global_crc32Lookup if you change
+                 // this value
 
 #ifndef NO_LUT
 #  ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
-const uint32_t Crc32Lookup[16][256] = {
+const uint32_t crc32_global_crc32Lookup[16][256] = {
 #  elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8)
-const uint32_t Crc32Lookup[8][256] = {
+const uint32_t crc32_global_crc32Lookup[8][256] = {
 #  elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
-const uint32_t Crc32Lookup[4][256] = {
+const uint32_t crc32_global_crc32Lookup[4][256] = {
 #  elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
-const uint32_t Crc32Lookup[1][256] = {
+const uint32_t crc32_global_crc32Lookup[1][256] = {
 #  endif
-    //// same algorithm as crc32_bitwise
-    // for (int i = 0; i <= 0xFF; i++)
-    //{
-    //  uint32_t crc = i;
-    //  for (int j = 0; j < 8; j++)
-    //    crc = (crc >> 1) ^ ((crc & 1) * Polynomial);
-    //  Crc32Lookup[0][i] = crc;
-    //}
-    //// ... and the following slicing-by-8 algorithm (from Intel):
-    ////
     /// http://www.intel.com/technology/comms/perfnet/download/CRC_generators.pdf
     //// http://sourceforge.net/projects/slicing-by-8/
-    // for (int slice = 1; slice < MaxSlice; slice++)
-    //  Crc32Lookup[slice][i] = (Crc32Lookup[slice - 1][i] >> 8) ^
-    //  Crc32Lookup[0][Crc32Lookup[slice - 1][i] & 0xFF];
+    /*
+      // Full function
+      uint32_t crc = Crc32Lookup[0][0x80] = Polynomial;
+      for (unsigned int next = 0x40; next != 0; next >>= 1) {
+        crc = (crc >> 1) ^ ((crc & 1) * Polynomial);
+        Crc32Lookup[0][next] = crc;
+      }
+
+      for (unsigned int powerOfTwo = 2; powerOfTwo <= 0x80; powerOfTwo <<= 1) {
+        uint32_t crcExtraBit = Crc32Lookup[0][powerOfTwo];
+        for (unsigned int i = 1; i < powerOfTwo; i++)
+          Crc32Lookup[0][i + powerOfTwo] = Crc32Lookup[0][i] ^ crcExtraBit;
+      }
+
+      for (unsigned int i = 0; i <= 0xFF; i++) {
+        // for Slicing-by-4 and Slicing-by-8
+        Crc32Lookup[1][i] =
+            (Crc32Lookup[0][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[0][i] & 0xFF];
+        Crc32Lookup[2][i] =
+            (Crc32Lookup[1][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[1][i] & 0xFF];
+        Crc32Lookup[3][i] =
+            (Crc32Lookup[2][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[2][i] & 0xFF];
+        // only Slicing-by-8
+        Crc32Lookup[4][i] =
+            (Crc32Lookup[3][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[3][i] & 0xFF];
+        Crc32Lookup[5][i] =
+            (Crc32Lookup[4][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[4][i] & 0xFF];
+        Crc32Lookup[6][i] =
+            (Crc32Lookup[5][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[5][i] & 0xFF];
+        Crc32Lookup[7][i] =
+            (Crc32Lookup[6][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[6][i] & 0xFF];
+
+        // only Slicing-by-16
+        Crc32Lookup[8][i] =
+            (Crc32Lookup[7][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[7][i] & 0xFF];
+        Crc32Lookup[9][i] =
+            (Crc32Lookup[8][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[8][i] & 0xFF];
+        Crc32Lookup[10][i] =
+            (Crc32Lookup[9][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[9][i] & 0xFF];
+        Crc32Lookup[11][i] =
+            (Crc32Lookup[10][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[10][i] &
+      0xFF]; Crc32Lookup[12][i] = (Crc32Lookup[11][i] >> 8) ^
+      Crc32Lookup[0][Crc32Lookup[11][i] & 0xFF]; Crc32Lookup[13][i] =
+            (Crc32Lookup[12][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[12][i] &
+      0xFF]; Crc32Lookup[14][i] = (Crc32Lookup[13][i] >> 8) ^
+      Crc32Lookup[0][Crc32Lookup[13][i] & 0xFF]; Crc32Lookup[15][i] =
+            (Crc32Lookup[14][i] >> 8) ^ Crc32Lookup[0][Crc32Lookup[14][i] &
+      0xFF];
+      }
+    */
     {
         // note: the first number of every second row corresponds to the
         // half-byte look-up table !
