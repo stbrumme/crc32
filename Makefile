@@ -3,21 +3,21 @@
 
 # files
 PROGRAM   = Crc32Test
-LIBS      = -lrt
+LDLIBS    = -lrt
 HEADERS   = Crc32.h
 OBJECTS   = Crc32.o Crc32Test.o
 
 # flags
-FLAGS     = -O3 -Wall -Wextra -pedantic -s
+CXXFLAGS  = -O3 -Wall -Wextra -pedantic -s
 
 default: $(PROGRAM)
 all: default
 
 $(PROGRAM): $(OBJECTS) Makefile
-	$(CXX) $(OBJECTS) $(FLAGS) $(LIBS) -o $(PROGRAM)
+	$(CXX) $(OBJECTS) $(CXXFLAGS) $(LDLIBS) -o $(PROGRAM)
 
 %.o: %.cpp $(HEADERS) Makefile
-	$(CXX) $(FLAGS) -c $< -o $@
+	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 clean:
 	-rm -f $(OBJECTS) $(PROGRAM)
