@@ -56,6 +56,16 @@ if(NOT WIN32)
       OFF
       CACHE BOOL "" FORCE)
 
+  set(BENCHMARK_ENABLE_INSTALL
+      OFF
+      CACHE BOOL "" FORCE)
+
+  set(BENCHMARK_DOWNLOAD_DEPENDENCIES
+      ON
+      CACHE BOOL "" FORCE)
+      
+  set(CMAKE_CXX_CLANG_TIDY "")
+
   FetchContent_MakeAvailable(googletest googlebenchmark)
   # Lib: gtest_main benchmark::benchmark benchmark::benchmark_main
   # target_compile_features(crc32_test PRIVATE cxx_std_17)
