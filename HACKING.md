@@ -31,7 +31,7 @@ the project:
 
 ```json
 {
-  "version": 1,
+  "version": 2,
   "cmakeMinimumRequired": {
     "major": 3,
     "minor": 14,
@@ -41,7 +41,27 @@ the project:
     {
       "name": "dev",
       "binaryDir": "${sourceDir}/build/dev",
-      "inherits": ["dev-mode", "ci-<os>"]
+      "inherits": ["dev-mode", "ci-<os>"],
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "configuration": "Debug"
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "dev",
+      "configurePreset": "dev",
+      "configuration": "Debug",
+      "output": {
+        "outputOnFailure": true
+      }
     }
   ]
 }
@@ -55,73 +75,22 @@ these correspond to in the [`CMakePresets.json`](CMakePresets.json) file.
 sorts of things that you would otherwise want to pass to the configure command
 in the terminal.
 
-Full example with Ubuntu (Linux):
-
-```json
-{
-  "version": 1,
-  "cmakeMinimumRequired": {
-    "major": 3,
-    "minor": 14,
-    "patch": 0
-  },
-  "configurePresets": [
-    {
-      "name": "static-analyzers",
-      "hidden": true,
-      "inherits": ["clang-tidy", "cppcheck"]
-    },
-    {
-      "name": "dev-common",
-      "hidden": true,
-      "inherits": ["static-analyzers", "dev-mode"],
-      "cacheVariables": {
-        "BUILD_MCSS_DOCS": "ON"
-      }
-    },
-    {
-      "name": "dev-unix",
-      "binaryDir": "${sourceDir}/build/dev-unix",
-      "inherits": ["dev-common", "ci-unix"]
-    },
-    {
-      "name": "dev-win64",
-      "binaryDir": "${sourceDir}/build/dev-win64",
-      "inherits": ["dev-common", "ci-win64"]
-    },
-    {
-      "name": "dev",
-      "binaryDir": "${sourceDir}/build/dev",
-      "inherits": "dev-unix"
-    },
-    {
-      "name": "dev-coverage",
-      "binaryDir": "${sourceDir}/build/coverage",
-      "inherits": ["dev-mode", "coverage-unix"]
-    }
-  ]
-}
-```
-
 ### Configure, build and test
 
 If you followed the above instructions, then you can configure, build and test
 the project respectively with the following commands from the project root on
-Windows:
+any operating system with any build system:
 
 ```sh
 cmake --preset=dev
-cmake --build build/dev --config Release
-cd build/dev && ctest -C Release
+cmake --build --preset=dev
+ctest --preset=dev
 ```
 
-And here is the same on a Unix based system (Linux, macOS):
-
-```sh
-cmake --preset=dev
-cmake --build build/dev
-cd build/dev && ctest
-```
+Please note that both the build and test command accepts a `-j` flag to specify
+the number of jobs to use, which should ideally be specified to the number of
+threads your CPU has. You may also want to add that to your preset using the
+`jobs` property, see the [presets documentation][1] for more details.
 
 [1]: https://cmake.org/cmake/help/latest/manual/cmake-presets.7.html
 [2]: https://cmake.org/download/

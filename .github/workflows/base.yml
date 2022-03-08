@@ -16,67 +16,65 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: "Checkout Code"
-        uses: actions/checkout@v2
-        with:
-          submodules: "recursive"
-          fetch-depth: 0
+    - name: "Checkout Code"
+      uses: actions/checkout@v3
+      with:
+        submodules: "recursive"
+        fetch-depth: 0
 
-      - uses: actions/setup-python@v2
-        with: { python-version: "3.8" }
+    - uses: actions/setup-python@v2
+      with: { python-version: "3.8" }
 
-      - name: Install codespell
-        run: pip3 install codespell
+    - name: Install codespell
+      run: pip3 install codespell
 
-      - name: Lint
-        run: cmake -D FORMAT_COMMAND=clang-format-11 -P cmake/lint.cmake
+    - name: Lint
+      run: cmake -D FORMAT_COMMAND=clang-format-11 -P cmake/lint.cmake
 
-      - name: Spell check
-        if: always()
-        run: cmake -P cmake/spell.cmake
+    - name: Spell check
+      if: always()
+      run: cmake -P cmake/spell.cmake
 
   coverage:
     needs: [lint]
 
     runs-on: ubuntu-latest
 
-    # To enable coverage, go to https://codecov.io/, acquire a token, put it
-    # into your secrets (Settings > Secrets > New repository secret), delete
-    # the last line from the conditional below and edit the "<name>"
-    # placeholder to your GitHub name.
+    # To enable coverage, delete the last line from the conditional below and
+    # edit the "<name>" placeholder to your GitHub name.
     # If you do not wish to use codecov, then simply delete this job from the
     # workflow.
     if: github.repository_owner == 'Name'
       && false
 
     steps:
-      - name: "Checkout Code"
-        uses: actions/checkout@v2
-        with:
-          submodules: "recursive"
-          fetch-depth: 0
+    - name: "Checkout Code"
+      uses: actions/checkout@v3
+      with:
+        submodules: "recursive"
+        fetch-depth: 0
 
-      - name: Install LCov
-        run: sudo apt-get update -q
-          && sudo apt-get install lcov -q -y
+    - name: Install LCov
+      run: sudo apt-get update -q
+        && sudo apt-get install lcov -q -y
 
-      - name: Configure
-        run: cmake --preset=ci-coverage
+    - name: Configure
+      run: cmake --preset=ci-coverage
 
-      - name: Build
-        run: cmake --build build/coverage -j 2
+    - name: Build
+      run: cmake --build build/coverage -j 2
 
-      - name: Test
-        working-directory: build/coverage
-        run: ctest --verbose --output-on-failure -j 2
+    - name: Test
+      working-directory: build/coverage
+      run: ctest --output-on-failure -j 2
 
-      - name: Process coverage info
-        run: cmake --build build/coverage -t coverage
+    - name: Process coverage info
+      run: cmake --build build/coverage -t coverage
 
-      - name: Submit to codecov.io
-        uses: codecov/codecov-action@v1
-        with:
-          file: build/coverage/coverage.info
+    - name: Submit to codecov.io
+      uses: codecov/codecov-action@v1
+      with:
+        file: build/coverage/coverage.info
 
   sanitize:
     needs: [lint]
@@ -84,29 +82,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: "Checkout Code"
-        uses: actions/checkout@v2
-        with:
-          submodules: "recursive"
-          fetch-depth: 0
+    - name: "Checkout Code"
+      uses: actions/checkout@v3
+      with:
+        submodules: "recursive"
+        fetch-depth: 0
 
-      - name: Configure
-        env: { CXX: clang++-11 }
-        run: cmake --preset=ci-sanitize
+    - name: Configure
+      env: { CXX: clang++-11 }
+      run: cmake --preset=ci-sanitize
 
-      - name: Build
-        run: cmake --build build/sanitize -j 2
+    - name: Build
+      run: cmake --build build/sanitize -j 2
 
-      - name: Test
-        working-directory: build/sanitize
-        env:
-          ASAN_OPTIONS: "strict_string_checks=1:\
-            detect_stack_use_after_return=1:\
-            check_initialization_order=1:\
-            strict_init_order=1:\
-            detect_leaks=1"
-          UBSAN_OPTIONS: print_stacktrace=1
-        run: ctest --verbose --output-on-failure -j 2
+    - name: Test
+      working-directory: build/sanitize
+      env:
+        ASAN_OPTIONS: "strict_string_checks=1:\
+          detect_stack_use_after_return=1:\
+          check_initialization_order=1:\
+          strict_init_order=1:\
+          detect_leaks=1"
+        UBSAN_OPTIONS: print_stacktrace=1
+      run: ctest --output-on-failure -j 2
 
   test:
     needs: [lint]
@@ -114,48 +112,37 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos, ubuntu, windows]
+        os: [macos-latest, ubuntu-latest, windows-2022]
 
         type: [shared, static]
 
         include:
-          - { type: shared, shared: YES }
-          - { type: static, shared: NO }
+        - { type: shared, shared: YES }
+        - { type: static, shared: NO }
 
-    runs-on: ${{ matrix.os }}-latest
+    runs-on: ${{ matrix.os }}
 
     steps:
-      - name: "Checkout Code"
-        uses: actions/checkout@v2
-        with:
-          submodules: "recursive"
-          fetch-depth: 0
+    - uses: actions/checkout@v2
 
-      - name: Install static analyzers
-        if: matrix.os == 'ubuntu'
-        run: sudo apt-get install clang-tidy cppcheck -y -q
+    - name: Install static analyzers
+      if: matrix.os == 'ubuntu-latest'
+      run: sudo apt-get install clang-tidy cppcheck -y -q
 
-      - name: Configure linux
-        if: matrix.os == 'ubuntu'
-        run: cmake --preset=ci-${{ matrix.os }}
-          -D BUILD_SHARED_LIBS=${{ matrix.shared }}
-          -D BENCHMARK_TEST=ON
+    - name: Configure
+      shell: pwsh
+      run: cmake "--preset=ci-$("${{ matrix.os }}".split("-")[0])"
+        -D BUILD_SHARED_LIBS=${{ matrix.shared }}
 
-      - name: Configure macos/windows
-        if: matrix.os == 'macos' || matrix.os == 'windows'
-        run: cmake --preset=ci-${{ matrix.os }}
-          -D BUILD_SHARED_LIBS=${{ matrix.shared }}
-          -D BENCHMARK_TEST=OFF
+    - name: Build
+      run: cmake --build build --config Release -j 2
 
-      - name: Build
-        run: cmake --build build --config Release -j 2
+    - name: Install
+      run: cmake --install build --config Release --prefix prefix
 
-      - name: Install
-        run: cmake --install build --config Release --prefix prefix
-
-      - name: Test
-        working-directory: build
-        run: ctest --verbose --output-on-failure -C Release -j 2
+    - name: Test
+      working-directory: build
+      run: ctest --output-on-failure -C Release -j 2
 
   docs:
     # Deploy docs only when builds succeed
@@ -175,32 +162,32 @@ jobs:
     # If you do not wish to use GitHub Pages for deploying documentation, then
     # simply delete this job similarly to the coverage one.
     if: github.ref == 'refs/heads/main'
-      && github.repository_owner == 'Name'
-      && false
+      && github.event_name == 'push'
+      && github.repository_owner == 'bensuperpc'
 
     steps:
-      - name: "Checkout Code"
-        uses: actions/checkout@v2
-        with:
-          submodules: "recursive"
-          fetch-depth: 0
+    - name: "Checkout Code"
+      uses: actions/checkout@v3
+      with:
+        submodules: "recursive"
+        fetch-depth: 0
 
-      - uses: actions/setup-python@v2
-        with: { python-version: "3.8" }
+    - uses: actions/setup-python@v2
+      with: { python-version: "3.8" }
 
-      - name: Install m.css dependencies
-        run: pip3 install jinja2 Pygments
+    - name: Install m.css dependencies
+      run: pip3 install jinja2 Pygments
 
-      - name: Install Doxygen
-        run: sudo apt-get update -q
-          && sudo apt-get install doxygen -q -y
+    - name: Install Doxygen
+      run: sudo apt-get update -q
+        && sudo apt-get install doxygen -q -y
 
-      - name: Build docs
-        run: cmake -B build -D "CMAKE_PROJECT_INCLUDE=$PWD/cmake/docs.cmake"
-          && cmake --build build --target docs
+    - name: Build docs
+      run: cmake "-DPROJECT_SOURCE_DIR=$PWD" "-DPROJECT_BINARY_DIR=$PWD/build"
+        -P cmake/docs-ci.cmake
 
-      - name: Deploy docs
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: build/docs/html
+    - name: Deploy docs
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: build/docs/html

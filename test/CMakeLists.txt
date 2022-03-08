@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.14)
 project(crc32Tests LANGUAGES C CXX)
 
 include(../cmake/project-is-top-level.cmake)
+include(../cmake/folders.cmake)
 include(../cmake/windows-set-path.cmake)
 
 if(PROJECT_IS_TOP_LEVEL)
@@ -76,6 +77,8 @@ if(NOT WIN32)
   target_link_libraries(crc32_test PRIVATE crc32::crc32 gtest_main)
   add_test(NAME crc32_test COMMAND crc32_test)
   # windows_set_path(crc32_test crc32::crc32 gtest_main)
+
+  add_folders(Test)
 else()
   message(WARNING "Disable tests, only tested on Linux and MacOS x86_64")
 endif()
