@@ -228,4 +228,7 @@ CRC32_EXPORT uint32_t crc32_16bytes_prefetch(const std::string& data,
 #  endif
 
 #endif
+
+// Only on private function CRC32_SUPPRESS_C4251
+
 }  // namespace crc32
