@@ -1,0 +1,45 @@
+name: windows
+
+on:
+  push:
+    branches:
+      - "*"
+    paths-ignore:
+      - "**.md"
+  pull_request:
+    branches:
+      - "*"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shared: [YES, NO]
+        standard: [11, 14, 17, 20]
+        platform: [Win32, x64]
+        build_type: [Debug, Release]
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v2
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: Create Build Environment
+        run: cmake -E make_directory ${{runner.workspace}}/build
+
+      - name: Configure
+        run: cmake -S . -B build -D CMAKE_BUILD_TYPE=${{matrix.build_type}}
+          -A ${{matrix.platform}} -D CMAKE_CXX_STANDARD=${{matrix.standard}}
+          -D BUILD_SHARED_LIBS=${{matrix.shared}} --preset=ci-windows
+
+      - name: Build
+        run: cmake --build build --parallel 2
+
+      - name: Test
+        run: ctest --test-dir build --verbose --output-on-failure --parallel 2
+        env:
+          CTEST_OUTPUT_ON_FAILURE: True
