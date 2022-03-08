@@ -44,7 +44,7 @@ jobs:
     # edit the "<name>" placeholder to your GitHub name.
     # If you do not wish to use codecov, then simply delete this job from the
     # workflow.
-    if: github.repository_owner == 'Name'
+    if: github.repository_owner == 'stbrumme'
       && false
 
     steps:
@@ -161,9 +161,10 @@ jobs:
     # this comment and the last line in the conditional below.
     # If you do not wish to use GitHub Pages for deploying documentation, then
     # simply delete this job similarly to the coverage one.
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/master'
       && github.event_name == 'push'
-      && github.repository_owner == 'bensuperpc'
+      && github.repository_owner == 'stbrumme'
+      && false
 
     steps:
     - name: "Checkout Code"
