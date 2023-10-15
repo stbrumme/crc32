@@ -4,6 +4,9 @@ This file tracks the main changes to my CRC32 library.
 project website: https://create.stephan-brumme.com/crc32/
 GitHub mirror:   https://github.com/stbrumme/crc32/
 
+## October   6, 2023 (version 10)
+- added Slicing-by-2
+
 ## December  6, 2019 (version 9)
 - added support for multi-threaded computation
 

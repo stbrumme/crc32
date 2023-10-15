@@ -147,6 +147,13 @@ int main(int argc, char* argv[])
   printf("  1 byte  at once / %d threads: CRC=%08X, %.3fs, %.3f MB/s\n",
          numThreads, crc, duration, (NumBytes / (1024*1024)) / duration);
 
+  // two bytes at once
+  startTime = seconds();
+  crc = run(crc32_2bytes, data, NumBytes, numThreads);
+  duration  = seconds() - startTime;
+  printf("  2 bytes at once / %d threads: CRC=%08X, %.3fs, %.3f MB/s\n",
+         numThreads, crc, duration, (NumBytes / (1024*1024)) / duration);
+
   // four bytes at once
   startTime = seconds();
   crc = run(crc32_4bytes, data, NumBytes, numThreads);

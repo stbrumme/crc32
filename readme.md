@@ -16,6 +16,7 @@ Algorithms:
 - half-byte
 - tableless full-byte
 - Sarwate's original algorithm
+- slicing-by-2
 - slicing-by-4
 - slicing-by-8
 - slicing-by-16

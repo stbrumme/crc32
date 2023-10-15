@@ -383,6 +383,36 @@ uint32_t crc32_1byte(const void* data, size_t length, uint32_t previousCrc32 = 0
 
 
 /// compute CRC32
+uint32_t crc32_2bytes(const void* data, size_t length, uint32_t previousCrc32 = 0)
+{
+  uint16_t* current = (uint16_t*) data;
+  uint32_t  crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
+
+  // process two bytes at once
+  while (length >= 2)
+  {
+    crc ^= *current++;
+    uint16_t offset1 = 1*256 + ( crc      & 0xFF);
+    uint16_t offset0 = 0*256 + ((crc>> 8) & 0xFF);
+    crc  = (crc>>16) ^
+           pgm_read_dword_near(crc32Lookup + offset1) ^
+           pgm_read_dword_near(crc32Lookup + offset0);
+    length -= 2;
+  }
+
+  const uint8_t* currentChar = (uint8_t*) current;
+  // remaining 1 byte (standard CRC table-based algorithm)
+  while (length--)
+  {
+    uint8_t offset = uint8_t(crc) ^ *current++;
+    crc = (crc >> 8) ^ pgm_read_dword_near(crc32Lookup + offset);
+  }
+
+  return ~crc; // same as crc ^ 0xFFFFFFFF
+}
+
+
+/// compute CRC32
 uint32_t crc32_4bytes(const void* data, size_t length, uint32_t previousCrc32 = 0)
 {
   uint32_t* current = (uint32_t*) data;
@@ -506,6 +536,21 @@ void loop()
   millisecs = millis() - now;
   throughput = (unsigned long)Repetitions * NumBytes / millisecs;
   Serial.print("crc32_1byte    = ");
+  Serial.print(crc, HEX);
+  Serial.print(" (");
+  Serial.print(millisecs);
+  Serial.print("ms, ");
+  Serial.print(throughput);
+  Serial.println(" kByte/s)");
+
+
+  // 2 bytes
+  now = millis();
+  for (int i = 1; i < Repetitions; i++)
+    crc = crc32_2bytes(data, NumBytes);
+  millisecs = millis() - now;
+  throughput = (unsigned long)Repetitions * NumBytes / millisecs;
+  Serial.print("crc32_2bytes   = ");
   Serial.print(crc, HEX);
   Serial.print(" (");
   Serial.print(millisecs);
