@@ -11,6 +11,7 @@
 // - crc32_bitwise  doesn't need it at all
 // - crc32_halfbyte has its own small lookup table
 // - crc32_1byte    needs only Crc32Lookup[0]
+// - crc32_2bytes   needs only Crc32Lookup[0..1]
 // - crc32_4bytes   needs only Crc32Lookup[0..3]
 // - crc32_8bytes   needs only Crc32Lookup[0..7]
 // - crc32_4x8bytes needs only Crc32Lookup[0..7]
@@ -88,6 +89,8 @@ namespace
   const size_t MaxSlice = 8;
   #elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
   const size_t MaxSlice = 4;
+  #elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_2)
+  const size_t MaxSlice = 2;
   #elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
   const size_t MaxSlice = 1;
   #else
@@ -246,6 +249,41 @@ uint32_t crc32_1byte_tableless2(const void* data, size_t length, uint32_t previo
 
   return ~crc; // same as crc ^ 0xFFFFFFFF
 }
+
+
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_2
+/// compute CRC32 (Slicing-by-2 algorithm)
+uint32_t crc32_2bytes(const void* data, size_t length, uint32_t previousCrc32)
+{
+  uint32_t  crc = ~previousCrc32; // same as previousCrc32 ^ 0xFFFFFFFF
+  const uint16_t* current = (const uint16_t*) data;
+
+  // process two bytes at once (Slicing-by-2)
+  while (length >= 2)
+  {
+#if __BYTE_ORDER == __BIG_ENDIAN
+    uint32_t one = *current++ ^ swap(crc);
+    crc = (one>>16) ^
+          Crc32Lookup[0][ one      & 0xFF] ^
+          Crc32Lookup[1][(one>> 8) & 0xFF];
+#else
+    uint32_t one = *current++ ^ crc;
+    crc = (one>>16) ^
+          Crc32Lookup[0][(one>> 8) & 0xFF] ^
+          Crc32Lookup[1][ one      & 0xFF];
+#endif
+
+    length -= 2;
+  }
+
+  const uint8_t* currentChar = (const uint8_t*) current;
+  // remaining 1 byte (standard algorithm)
+  while (length-- != 0)
+    crc = (crc >> 8) ^ Crc32Lookup[0][(crc & 0xFF) ^ *currentChar++];
+
+  return ~crc; // same as crc ^ 0xFFFFFFFF
+}
+#endif
 
 
 #ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_4
@@ -541,6 +579,8 @@ uint32_t crc32_fast(const void* data, size_t length, uint32_t previousCrc32)
   return crc32_16bytes (data, length, previousCrc32);
 #elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8)
   return crc32_8bytes  (data, length, previousCrc32);
+#elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_2)
+  return crc32_2bytes  (data, length, previousCrc32);
 #elif defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4)
   return crc32_4bytes  (data, length, previousCrc32);
 #elif defined(CRC32_USE_LOOKUP_TABLE_BYTE)
@@ -710,8 +750,8 @@ const uint32_t Crc32Lookup[MaxSlice][256] =
     0xB3667A2E,0xC4614AB8,0x5D681B02,0x2A6F2B94,0xB40BBE37,0xC30C8EA1,0x5A05DF1B,0x2D02EF8D,
   }
 
-#if defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_16)
-  // beyond this point only relevant for Slicing-by-4, Slicing-by-8 and Slicing-by-16
+#if defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_2) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_16)
+  // beyond this point only relevant for Slicing-by-2, Slicing-by-4, Slicing-by-8 and Slicing-by-16
   ,{
     0x00000000,0x191B3141,0x32366282,0x2B2D53C3,0x646CC504,0x7D77F445,0x565AA786,0x4F4196C7,
     0xC8D98A08,0xD1C2BB49,0xFAEFE88A,0xE3F4D9CB,0xACB54F0C,0xB5AE7E4D,0x9E832D8E,0x87981CCF,
@@ -746,7 +786,9 @@ const uint32_t Crc32Lookup[MaxSlice][256] =
     0x14BCE1BD,0x0DA7D0FC,0x268A833F,0x3F91B27E,0x70D024B9,0x69CB15F8,0x42E6463B,0x5BFD777A,
     0xDC656BB5,0xC57E5AF4,0xEE530937,0xF7483876,0xB809AEB1,0xA1129FF0,0x8A3FCC33,0x9324FD72,
   },
-
+#endif // defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_2) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_16)
+#if defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_4) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_8) || defined(CRC32_USE_LOOKUP_TABLE_SLICING_BY_16)
+  // beyond this point only relevant for Slicing-by-4, Slicing-by-8 and Slicing-by-16
   {
     0x00000000,0x01C26A37,0x0384D46E,0x0246BE59,0x0709A8DC,0x06CBC2EB,0x048D7CB2,0x054F1685,
     0x0E1351B8,0x0FD13B8F,0x0D9785D6,0x0C55EFE1,0x091AF964,0x08D89353,0x0A9E2D0A,0x0B5C473D,

@@ -107,6 +107,15 @@ int main(int, char**)
          crc, duration, (NumBytes / (1024*1024)) / duration);
 #endif // CRC32_USE_LOOKUP_TABLE_BYTE
 
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_2
+  // two bytes at once
+  startTime = seconds();
+  crc = crc32_2bytes(data, NumBytes);
+  duration  = seconds() - startTime;
+  printf("  2 bytes at once: CRC=%08X, %.3fs, %.3f MB/s\n",
+         crc, duration, (NumBytes / (1024*1024)) / duration);
+#endif // CRC32_USE_LOOKUP_TABLE_SLICING_BY_2
+
 #ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_4
   // four bytes at once
   startTime = seconds();

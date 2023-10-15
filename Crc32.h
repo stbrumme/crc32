@@ -9,6 +9,7 @@
 // if running on an embedded system, you might consider shrinking the
 // big Crc32Lookup table by undefining these lines:
 #define CRC32_USE_LOOKUP_TABLE_BYTE
+#define CRC32_USE_LOOKUP_TABLE_SLICING_BY_2
 #define CRC32_USE_LOOKUP_TABLE_SLICING_BY_4
 #define CRC32_USE_LOOKUP_TABLE_SLICING_BY_8
 #define CRC32_USE_LOOKUP_TABLE_SLICING_BY_16
@@ -48,6 +49,11 @@ uint32_t crc32_1byte   (const void* data, size_t length, uint32_t previousCrc32 
 uint32_t crc32_1byte_tableless (const void* data, size_t length, uint32_t previousCrc32 = 0);
 /// compute CRC32 (byte algorithm) without lookup tables
 uint32_t crc32_1byte_tableless2(const void* data, size_t length, uint32_t previousCrc32 = 0);
+
+#ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_2
+/// compute CRC32 (Slicing-by-2 algorithm)
+uint32_t crc32_2bytes  (const void* data, size_t length, uint32_t previousCrc32 = 0);
+#endif
 
 #ifdef CRC32_USE_LOOKUP_TABLE_SLICING_BY_4
 /// compute CRC32 (Slicing-by-4 algorithm)
