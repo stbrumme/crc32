@@ -6,6 +6,9 @@
 // see http://create.stephan-brumme.com/disclaimer.html
 //
 
+#ifndef CRC32_H_
+#define CRC32_H_
+
 // if running on an embedded system, you might consider shrinking the
 // big Crc32Lookup table by undefining these lines:
 #define CRC32_USE_LOOKUP_TABLE_BYTE
@@ -26,6 +29,10 @@
 #include <stdint.h>
 // size_t
 #include <cstddef>
+
+#if defined(__cplusplus)
+extern "C" {
+#endif
 
 // crc32_fast selects the fastest algorithm depending on flags (CRC32_USE_LOOKUP_...)
 /// compute CRC32 using the fastest algorithm for large datasets on modern CPUs
@@ -67,3 +74,9 @@ uint32_t crc32_16bytes (const void* data, size_t length, uint32_t previousCrc32 
 /// compute CRC32 (Slicing-by-16 algorithm, prefetch upcoming data blocks)
 uint32_t crc32_16bytes_prefetch(const void* data, size_t length, uint32_t previousCrc32 = 0, size_t prefetchAhead = 256);
 #endif
+
+#if defined(__cplusplus)
+}
+#endif // __cplusplus
+
+#endif // CRC32_H_
